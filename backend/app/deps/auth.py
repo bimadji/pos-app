@@ -2,7 +2,7 @@
 import uuid
 from typing import Annotated, Dict, Any
 from fastapi import Depends, HTTPException, status
-from fastapi.security import OAuth2PasswordBearer
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 import jwt
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
@@ -11,12 +11,23 @@ from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/v1/auth/login")
+http_bearer = HTTPBearer(auto_error=False)
 
 
 async def get_current_token_payload(
-    token: Annotated[str, Depends(oauth2_scheme)],
+    credentials: Annotated[HTTPAuthorizationCredentials | None, Depends(http_bearer)],
 ) -> Dict[str, Any]:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail={
+            "code": "INVALID_CREDENTIALS",
+            "message": "Token tidak valid atau telah kadaluarsa.",
+        },
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    if not credentials or not credentials.credentials:
+        raise credentials_exception
+    token = credentials.credentials
     """Decode and validate JWT access token payload."""
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
