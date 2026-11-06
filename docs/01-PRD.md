@@ -24,10 +24,20 @@ Menghadirkan sistem operasional POS dine-in modern berbasis web yang menghilangk
 
 ### 2.2 Persona Pengguna
 
-#### Persona 1: Rian (Pelanggan Dine-in / Customer)
-* **Profil:** Mahasiswa atau pekerja remote berusia 20-30 tahun yang datang ke kafe untuk nongkrong atau bekerja santai (*work from cafe*).
-* **Kebutuhan:** Ingin langsung duduk mencari meja yang nyaman, memindai QR code di meja menggunakan kamera ponsel pintar, melihat katalog menu lengkap dengan foto dan harga jelas, memasukkan preferensi rasa, dan mengirim pesanan tanpa perlu berdiri mengantre di kasir.
-* **Titik Sakit:** Kesal jika harus mengunduh aplikasi baru, malas mengisi form registrasi panjang, dan bingung jika ingin memesan menu tambahan (*round 2*) tetapi pelayan tidak kunjung datang.
+#### Persona 1A: Rian — "The Solo Remote Worker / Student" (Penyendiri & Fokus Kerja)
+* **Profil:** Mahasiswa atau pekerja remote berusia 20-30 tahun yang datang ke kafe sendirian untuk belajar atau bekerja santai (WFC) selama 2-4 jam.
+* **Perilaku & Kebutuhan:** Memesan 1 minuman di awal, lalu 1.5 jam kemudian memesan minuman atau cemilan kedua tanpa mau terdistraksi dari layar laptopnya (*multi-round ordering via HP sangat krusial*). Sangat sensitif terhadap preferensi rasa kopi (*less ice, less sugar, oat milk*).
+* **Titik Sakit:** Malas memanggil pelayan di tengah fokus kerja, dan enggan mengunduh aplikasi baru atau mengisi form registrasi panjang hanya untuk memesan segelas kopi.
+
+#### Persona 1B: Dira & Geng Kampus — "The Social Hangout Group" (Rombongan Meja 4-6 Orang)
+* **Profil:** Kelompok pertemanan 4-6 orang yang datang beramai-ramai untuk nongkrong, ngobrol santai, atau nugas kelompok.
+* **Perilaku & Kebutuhan:** Satu orang (Dira) menjadi perwakilan pemindai QR untuk meja mereka, memesan banyak menu sekaligus (kombinasi 4 kopi berbeda rasa, cemilan bersama, dan makanan berat). Setiap teman memiliki catatan selera berbeda (*"kopi A less sugar, kopi B extra shot, saus kentang dipisah"*).
+* **Titik Sakit:** Minuman sering tertukar jika tidak ada catatan per item yang jelas, bon meja tercecer jika teman memesan susulan secara terpisah, dan kerepotan saat pelunasan tagihan di meja kasir.
+
+#### Persona 1C: Mas Dimas — "The In-a-Hurry Professional" (Makan Siang Cepat / Terburu Waktu)
+* **Profil:** Pekerja kantoran yang datang saat jam istirahat makan siang (12:00-13:00) dengan alokasi waktu makan terbatas.
+* **Perilaku & Kebutuhan:** Menolak membuang waktu 10 menit berdiri mengantre di kasir. Langsung duduk, memindai QR, memesan menu makanan berat cepat saji (*Nasi Sei Sapi / Rice Bowl*), dan sangat memantau *Live Status Pesanan di HP* untuk memastikan makanannya sedang dimasak agar tidak terlambat kembali ke kantor.
+* **Titik Sakit:** Cemas jika tidak tahu apakah pesanan sudah diproses dapur atau belum, dan kesal jika proses pembayaran di kasir lambat saat jam makan siang padat.
 
 #### Persona 2: Bima (Kasir & Barista Kafe)
 * **Profil:** Staf operasional kafe yang bertugas menerima pesanan, meracik minuman, menyajikan makanan, dan mengelola penerimaan uang di meja kasir.
@@ -38,7 +48,6 @@ Menghadirkan sistem operasional POS dine-in modern berbasis web yang menghilangk
 * **Profil:** Pemilik bisnis kafe mandiri yang mengawasi keberlangsungan usaha, keuntungan harian, dan ketersediaan stok bahan baku.
 * **Kebutuhan:** Dapat melihat ringkasan omzet harian dari ponsel atau laptop pribadinya, mengetahui menu apa yang paling laku, mematikan menu secara cepat jika bahan baku mendadak habis, dan menerima laporan rekonsiliasi kas kasir tanpa perlu hadir fisik di kafe sepanjang hari.
 * **Titik Sakit:** Sering mengalami kebobolan stok bahan tanpa tercatat, laporan keuangan tidak cocok antara catatan kasir dengan uang bank, serta biaya operasional software yang memberatkan arus kas bulanan.
-
 ---
 
 ## 3. Tujuan Produk & Metrik Keberhasilan (KPI)
