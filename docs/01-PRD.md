@@ -39,11 +39,18 @@ Menghadirkan sistem operasional POS dine-in modern berbasis web yang menghilangk
 * **Perilaku & Kebutuhan:** Menolak membuang waktu 10 menit berdiri mengantre di kasir. Langsung duduk, memindai QR, memesan menu makanan berat cepat saji (*Nasi Sei Sapi / Rice Bowl*), dan sangat memantau *Live Status Pesanan di HP* untuk memastikan makanannya sedang dimasak agar tidak terlambat kembali ke kantor.
 * **Titik Sakit:** Cemas jika tidak tahu apakah pesanan sudah diproses dapur atau belum, dan kesal jika proses pembayaran di kasir lambat saat jam makan siang padat.
 
-#### Persona 2: Bima (Kasir & Barista Kafe)
-* **Profil:** Staf operasional kafe yang bertugas menerima pesanan, meracik minuman, menyajikan makanan, dan mengelola penerimaan uang di meja kasir.
+#### Persona 2A: Bima — "The Morning Shift Barista & Cashier" (Kasir Shift Pagi)
+* **Profil:** Staf operasional kafe yang membuka kafe jam 08:00 sampai 16:00, bertugas memasukkan modal awal laci kasir, menerima pesanan, meracik minuman, menyajikan makanan, dan mengelola penerimaan uang.
 * **Kebutuhan:** Membutuhkan layar kerja yang memperlihatkan denah meja terisi secara visual, menerima notifikasi berbunyi saat ada pesanan baru masuk dari meja pelanggan, mengetahui rincian catatan pesanan dengan jelas, dapat menangani pemindahan meja jika pelanggan berpindah tempat duduk, serta proses pelunasan kasir yang cepat (Tunai dan QRIS).
 * **Titik Sakit:** Panik jika pesanan kertas tercecer saat kafe ramai, pesanan ganda masuk tanpa sengaja karena pelanggan klik berulang, dan selisih uang kas laci saat pergantian shift akibat pencatatan manual yang tidak rapi.
 
+#### Persona 2B: Sarah — "The Afternoon/Night Shift Cashier" (Kasir Shift Sore & Handover)
+* **Profil:** Staf operasional kafe shift sore/malam (16:00 sampai 23:00) yang menerima serah terima laci kasir dari Bima, mengoperasikan sistem di puncak keramaian malam (*peak night hours*), dan melakukan penutupan kasir akhir hari (*end-of-day closing*).
+* **Perilaku & Skenario Handover:**
+  1. **Serah Terima Shift (Handover):** Saat jam 16:00, Sarah mengawasi Bima melakukan "Tutup Shift Pagi" dan menghitung fisik laci kasir. Sarah kemudian login menggunakan akunnya sendiri (`sarah`) dan membuka "Shift Sore" dengan modal awal yang disepakati (misal uang kembalian Rp 200.000, sementara kelebihan omzet shift pagi disetorkan ke brankas/amplop owner).
+  2. **Audit Kas Terpisah:** Sarah tidak mau bertanggung jawab jika ada uang hilang atau selisih kas yang terjadi pada shift pagi Bima. Sistem wajib memisahkan mutasi kas shift Bima dan shift Sarah secara independen.
+  3. **Penutupan Akhir Hari:** Jam 23:00, Sarah menghitung seluruh fisik uang kas akhir hari, sistem mencocokkan dengan rekaman mutasi penjualan shift sore, dan mencatat laporan penutupan shift ke database.
+* **Titik Sakit:** Sering disalahkan oleh pemilik kafe jika ada selisih uang laci di malam hari padahal kebocorannya terjadi di shift siang; butuh bukti audit shift yang tegas dan transparan antar-staf.
 #### Persona 3: Pak Seno (Pemilik Kafe / Admin Owner)
 * **Profil:** Pemilik bisnis kafe mandiri yang mengawasi keberlangsungan usaha, keuntungan harian, dan ketersediaan stok bahan baku.
 * **Kebutuhan:** Dapat melihat ringkasan omzet harian dari ponsel atau laptop pribadinya, mengetahui menu apa yang paling laku, mematikan menu secara cepat jika bahan baku mendadak habis, dan menerima laporan rekonsiliasi kas kasir tanpa perlu hadir fisik di kafe sepanjang hari.
