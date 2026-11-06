@@ -1,0 +1,8 @@
+{
+  "schemaVersion": 1,
+  "command": "deliver",
+  "status": "pending",
+  "receiptId": "0dc05260-b5bb-455f-a7b0-edb87a74d75d",
+  "input": "E:\\Kuliah\\AI Workspace\\posapp\\.archify\\workflow-app-flow-20261106-092506\\candidate.json",
+  "output": "E:\\Kuliah\\AI Workspace\\posapp\\.archify\\workflow-app-flow-20261106-092506\\app-flow-workflow.html"
+}

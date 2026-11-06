@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "cba71e0b-9eda-4e5a-bb08-0094f4879989",
+  "status": "current",
+  "command": "deliver",
+  "type": "sequence",
+  "input": "E:\\Kuliah\\AI Workspace\\posapp\\.archify\\workflow-app-flow-20261106-092506\\candidate.json",
+  "output": "E:\\Kuliah\\AI Workspace\\posapp\\.archify\\workflow-app-flow-20261106-092506\\app-flow-sequence.html",
+  "specification": {
+    "sha256": "b82550621c79db89ff50b9d97b6c1e6c9b0f2a7bb6c257df5afc21da976d6d81",
+    "bytes": 4600
+  },
+  "artifact": {
+    "sha256": "e41f7878ebb20fb6ebf09d8cd3235a0925f9f4e5f57f246e75c4888182a294b3",
+    "bytes": 761186
+  }
+}
