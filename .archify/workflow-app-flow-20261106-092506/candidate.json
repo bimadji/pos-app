@@ -1,0 +1,83 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "Alur Aplikasi End-to-End Kafe Dine-in Web POS",
+    "subtitle": "Interaksi Pelanggan, Kasir, Dapur, Backend API, dan PostgreSQL",
+    "output": ".archify/workflow-app-flow-20261106-092506/app-flow-sequence.html",
+    "viewBox": [1080, 620],
+    "column_fit": "spread",
+    "animation": "trace",
+    "quality_profile": "showcase"
+  },
+  "participants": [
+    { "id": "customer", "type": "external", "label": "Customer", "sublabel": "Ponsel Meja" },
+    { "id": "client_web", "type": "frontend", "label": "Web App", "sublabel": "React SPA" },
+    { "id": "api", "type": "backend", "label": "FastAPI", "sublabel": "REST + SSE" },
+    { "id": "db", "type": "database", "label": "PostgreSQL", "sublabel": "ACID Engine" },
+    { "id": "kitchen", "type": "frontend", "label": "Dapur/Barista", "sublabel": "Live Stream" },
+    { "id": "cashier", "type": "security", "label": "Kasir Kafe", "sublabel": "Billing & Shift" }
+  ],
+  "segments": [
+    { "from": 150, "to": 220, "label": "1. Buka Shift Kasir & QR" },
+    { "from": 230, "to": 340, "label": "2. Pesan Menu, Stok Atomik & Live Dapur" },
+    { "from": 350, "to": 440, "label": "3. Pelunasan Kasir & Struk" },
+    { "from": 450, "to": 500, "label": "4. Tutup Shift & Rekonsiliasi" }
+  ],
+  "messages": [
+    { "id": "m1", "from": "cashier", "to": "api", "y": 160, "label": "POST /shifts/open (modal Rp 200k)", "variant": "security" },
+    { "id": "m2", "from": "api", "to": "db", "y": 188, "label": "INSERT cashier_shifts", "variant": "emphasis" },
+    { "id": "m3", "from": "customer", "to": "client_web", "y": 216, "label": "Pindai QR meja (token HMAC)", "variant": "default" },
+
+    { "id": "m4", "from": "client_web", "to": "api", "y": 244, "label": "POST /orders (items, notes, Rian)", "variant": "emphasis" },
+    { "id": "m5", "from": "api", "to": "db", "y": 272, "label": "UPDATE stock atomik & INSERT order", "variant": "emphasis" },
+    { "id": "m6", "from": "api", "to": "kitchen", "y": 300, "label": "SSE Push: order.created (Meja 05)", "variant": "emphasis" },
+    { "id": "m7", "from": "kitchen", "to": "api", "y": 328, "label": "PATCH /orders/status (COOKING -> SERVED)", "variant": "default" },
+
+    { "id": "m8", "from": "cashier", "to": "api", "y": 360, "label": "POST /orders/pay (Idempotency-Key)", "variant": "security" },
+    { "id": "m9", "from": "api", "to": "db", "y": 390, "label": "INSERT payments + COMPLETED", "variant": "emphasis" },
+    { "id": "m10", "from": "cashier", "to": "client_web", "y": 420, "label": "Cetak struk kasir (window.print)", "variant": "default" },
+
+    { "id": "m11", "from": "cashier", "to": "api", "y": 460, "label": "POST /shifts/close (hitung kas fisik)", "variant": "security" },
+    { "id": "m12", "from": "api", "to": "db", "y": 490, "label": "UPDATE cashier_shifts selisih kas", "variant": "emphasis" }
+  ],
+  "activations": [
+    { "participant": "cashier", "from": 155, "to": 195, "type": "security" },
+    { "participant": "client_web", "from": 210, "to": 250, "type": "frontend" },
+    { "participant": "api", "from": 240, "to": 310, "type": "backend" },
+    { "participant": "db", "from": 268, "to": 285, "type": "database" },
+    { "participant": "kitchen", "from": 298, "to": 340, "type": "frontend" },
+    { "participant": "cashier", "from": 355, "to": 430, "type": "security" },
+    { "participant": "api", "from": 358, "to": 400, "type": "backend" },
+    { "participant": "cashier", "from": 455, "to": 498, "type": "security" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Alur Pelanggan & Dapur",
+      "items": [
+        "Akses QR meja langsung membuka web katalog tanpa proses login",
+        "Pemesanan langsung memotong stok atomik dan memicu lonceng notifikasi di dapur",
+        "Pesanan babak berikutnya terakumulasi otomatis ke dalam satu bon meja"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Integritas Kasir & Pembayaran",
+      "items": [
+        "Pembayaran dilindungi Idempotency-Key UUID untuk mencegah mutasi ganda",
+        "Status meja otomatis kembali kosong (AVAILABLE) begitu pembayaran dinyatakan lunas",
+        "Struk thermal dapat langsung dicetak kasir via window.print()"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Audit Shift & Handover",
+      "items": [
+        "Shift pagi dan shift sore memiliki sesi dan pencatatan kas terpisah",
+        "Penutupan shift mencocokkan modal awal + penjualan tunai vs uang fisik laci",
+        "Owner memantau pembukuan dan mutasi kas tanpa perlu hadir fisik di kafe"
+      ]
+    }
+  ]
+}
