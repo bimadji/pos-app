@@ -162,8 +162,11 @@ cd app && flutter analyze
 
 ## Code Conventions & Common Patterns
 
-### 1. Konvensi Penamaan & Bahasa
 * **Dokumentasi & Diskusi:** Bahasa Indonesia.
+* **Skill Wajib Berdasarkan Aktivitas:**
+  - **Menulis kode:** Gunakan skill `ponytail`.
+  - **Menulis dokumen di `docs/`:** Gunakan skill `karpathy-guidelines` dan `antislop`.
+  - **Menjelaskan kepada Bima dalam obrolan:** Gunakan skill `humanizer`.
 * **Nama Variabel, Fungsi, Kelas, Kolom DB, dan Endpoint:** Bahasa Inggris baku.
 * **REST Endpoints:** Huruf kecil jamak (*plural kebab-case*), contoh: `/api/v1/orders`, `/api/v1/cashier-shifts`.
 * **Database Tables & Columns:** Snake_case (`order_items`, `tenant_id`, `price_snapshot`).
