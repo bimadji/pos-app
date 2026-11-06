@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kafe Senja POS - Antarmuka Operasional</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap');
+    
+    :root {
+      --font-body: 'Plus Jakarta Sans', -apple-system, sans-serif;
+      --font-mono: 'JetBrains Mono', monospace;
+    }
+    
+    body {
+      font-family: var(--font-body);
+    }
+    
+    .font-mono-num {
+      font-family: var(--font-mono);
+      font-feature-settings: "tnum";
+    }
+
+    /* Accessibility focus rings */
+    button:focus-visible, a:focus-visible, input:focus-visible {
+      outline: 2px solid #b45309;
+      outline-offset: 2px;
+    }
+
+    /* Target area mobile 44px min */
+    .touch-target {
+      min-height: 44px;
+      min-width: 44px;
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      *, ::before, ::after {
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+        scroll-behavior: auto !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-stone-100 text-stone-900 min-h-screen flex flex-col">
+
+  <!-- Application Shell Header -->
+  <header class="bg-stone-900 text-stone-100 border-b border-stone-800 sticky top-0 z-40">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 bg-amber-700 text-stone-100 font-bold rounded flex items-center justify-center text-sm" aria-hidden="true">
+          KS
+        </div>
+        <div>
+          <h1 class="text-sm font-bold tracking-tight text-white leading-tight">Kafe Senja Kopi</h1>
+          <p class="text-xs text-stone-400">Sistem Operasional Dine-In Meja</p>
+        </div>
+      </div>
+
+      <!-- Navigation & Mode Tabs -->
+      <nav aria-label="Portal Peran" class="flex items-center gap-1 bg-stone-950 p-1 rounded-lg border border-stone-800 text-xs">
+        <button 
+          id="tab-customer" 
+          onclick="setRole('customer')" 
+          class="px-3 py-1.5 rounded font-medium text-stone-300 hover:text-white transition touch-target"
+          aria-selected="false"
+          role="tab">
+          Customer (HP)
+        </button>
+        <button 
+          id="tab-cashier" 
+          onclick="setRole('cashier')" 
+          class="px-3 py-1.5 rounded font-bold bg-amber-700 text-white shadow-sm transition touch-target"
+          aria-selected="true"
+          role="tab">
+          Kasir &amp; Dapur
+        </button>
+        <button 
+          id="tab-admin" 
+          onclick="setRole('admin')" 
+          class="px-3 py-1.5 rounded font-medium text-stone-300 hover:text-white transition touch-target"
+          aria-selected="false"
+          role="tab">
+          Admin Kafe
+        </button>
+      </nav>
+
+      <!-- Network and Shift Info -->
+      <div class="hidden sm:flex items-center gap-4 text-xs text-stone-300">
+        <div class="flex items-center gap-2">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" aria-hidden="true"></span>
+          <span>SSE Aktif</span>
+        </div>
+        <div class="text-stone-400 border-l border-stone-700 pl-3">
+          Shift Pagi: <span class="text-stone-200 font-medium">Bima</span>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Work Surface -->
+  <main class="max-w-7xl mx-auto p-4 sm:p-6 flex-1 w-full">
+
+    <!-- ============================================================== -->
+    <!-- PORTAL KASIR & DAPUR (Default Focus) -->
+    <!-- ============================================================== -->
+    <section id="view-cashier" class="space-y-4" aria-labelledby="heading-cashier">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white border border-stone-200 p-4 rounded-lg shadow-sm">
+        <div>
+          <h2 id="heading-cashier" class="text-base font-bold text-stone-900">Kendali Meja &amp; Antrean Pesanan</h2>
+          <p class="text-xs text-stone-600 mt-0.5">Denah meja restoran terhubung langsung ke notifikasi live stream dapur.</p>
+        </div>
+        <div class="flex items-center gap-2">
+          <div class="inline-flex rounded-md border border-stone-300 bg-stone-50 p-0.5 text-xs" role="group" aria-label="Format Tampilan Kasir">
+            <button onclick="setCashierDisplay('split')" id="btn-disp-split" class="px-3 py-1.5 rounded font-bold bg-white text-stone-900 shadow-sm border border-stone-200">
+              Denah Meja &amp; Bon
+            </button>
+            <button onclick="setCashierDisplay('table')" id="btn-disp-table" class="px-3 py-1.5 rounded text-stone-600 hover:text-stone-900">
+              Antrean Masak (Stream)
+            </button>
+          </div>
+          <button onclick="openCashModal()" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded border border-stone-300 touch-target flex items-center gap-1.5">
+            <span>Uang Laci: Rp 1.450.000</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Live Stream Notification Banner -->
+      <div class="bg-amber-50 border-l-4 border-amber-700 p-3 rounded-r-md flex flex-wrap items-center justify-between gap-3">
+        <div class="flex items-center gap-2 text-xs">
+          <span class="bg-amber-700 text-white font-bold px-2 py-0.5 rounded text-[11px]">PESANAN BARU</span>
+          <span class="font-bold text-stone-900">Meja 05:</span>
+          <span class="text-stone-700">2x Kopi Aren (Less ice), 1x Butter Croissant</span>
+          <span class="text-stone-500 font-mono-num">• 22 detik lalu</span>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="selectOrderTable(5)" class="px-3 py-1 bg-amber-700 hover:bg-amber-800 text-white text-xs font-semibold rounded touch-target">
+            Lihat Bon Meja 05
+          </button>
+        </div>
+      </div>
+
+      <!-- Split Layout: Table Map (Left 7) + Active Bill (Right 5) -->
+      <div id="cashier-split-layout" class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+        
+        <!-- Left: Table Grid Layout -->
+        <div class="lg:col-span-7 bg-white border border-stone-200 rounded-lg p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between pb-2 border-b border-stone-100 text-xs">
+            <span class="font-bold text-stone-800">Denah 12 Meja Kafe</span>
+            <div class="flex items-center gap-3 text-stone-600">
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-stone-200 border border-stone-300"></span> Kosong (8)</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-amber-100 border border-amber-400"></span> Makan (3)</span>
+              <span class="flex items-center gap-1"><span class="w-2.5 h-2.5 rounded bg-sky-100 border border-sky-400"></span> Baru (1)</span>
+            </div>
+          </div>
+
+          <!-- 12 Table Tiles Grid -->
+          <div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5" role="region" aria-label="Daftar Meja">
+            
+            <!-- Table 1 (Active Bill) -->
+            <button onclick="selectOrderTable(1)" class="p-3 rounded border border-amber-300 bg-amber-50/60 hover:bg-amber-100 text-left transition flex flex-col justify-between h-24 touch-target">
+              <div class="flex justify-between w-full">
+                <span class="font-bold text-stone-900 text-xs">Meja 01</span>
+                <span class="w-2 h-2 rounded-full bg-amber-600 mt-1" title="Ada pesanan"></span>
+              </div>
+              <div>
+                <div class="text-[11px] text-stone-600">2 Menu</div>
+                <div class="text-xs font-bold text-stone-900 font-mono-num">Rp 50.000</div>
+              </div>
+              <span class="text-[10px] text-amber-900 font-medium">Belum Bayar</span>
+            </button>
+
+            <!-- Table 2 (Cooking) -->
+            <button onclick="selectOrderTable(2)" class="p-3 rounded border border-sky-300 bg-sky-50 hover:bg-sky-100 text-left transition flex flex-col justify-between h-24 touch-target">
+              <div class="flex justify-between w-full">
+                <span class="font-bold text-stone-900 text-xs">Meja 02</span>
+                <span class="w-2 h-2 rounded-full bg-sky-600 mt-1" title="Sedang dimasak"></span>
+              </div>
+              <div>
+                <div class="text-[11px] text-stone-600">1 Menu</div>
+                <div class="text-xs font-bold text-stone-900 font-mono-num">Rp 22.000</div>
+              </div>
+              <span class="text-[10px] text-sky-800 font-medium">Dimasak</span>
+            </button>
+
+            <!-- Table 3 (Empty) -->
+            <div class="p-3 rounded border border-stone-200 bg-stone-50 text-left flex flex-col justify-between h-24 opacity-60">
+              <span class="font-semibold text-stone-500 text-xs">Meja 03</span>
+              <span class="text-xs text-stone-400 text-center">Kosong</span>
+              <span class="text-[10px] text-stone-400">-</span>
+            </div>
+
+            <!-- Table 4 (Empty) -->
+            <div class="p-3 rounded border border-stone-200 bg-stone-50 text-left flex flex-col justify-between h-24 opacity-60">
+              <span class="font-semibold text-stone-500 text-xs">Meja 04</span>
+              <span class="text-xs text-stone-400 text-center">Kosong</span>
+              <span class="text-[10px] text-stone-400">-</span>
+            </div>
+
+            <!-- Table 5 (Selected Active) -->
+            <button onclick="selectOrderTable(5)" class="p-3 rounded border-2 border-stone-900 bg-white text-left transition flex flex-col justify-between h-24 shadow-sm touch-target relative">
+              <div class="flex justify-between w-full">
+                <span class="font-bold text-stone-950 text-xs">Meja 05</span>
+                <span class="text-[10px] bg-stone-900 text-white font-bold px-1.5 py-0.2 rounded">Dipilih</span>
+              </div>
+              <div>
+                <div class="text-[11px] text-stone-600">3 Menu (2 Babak)</div>
+                <div class="text-xs font-bold text-stone-950 font-mono-num">Rp 122.100</div>
+              </div>
+              <span class="text-[10px] text-amber-800 font-semibold">Ada Pesanan Baru</span>
+            </button>
+
+            <!-- Table 6 to 12 (Empty State) -->
+            <div class="p-3 rounded border border-stone-200 bg-stone-50 text-left flex flex-col justify-between h-24 opacity-60">
+              <span class="font-semibold text-stone-500 text-xs">Meja 06</span>
+              <span class="text-xs text-stone-400 text-center">Kosong</span>
+              <span class="text-[10px] text-stone-400">-</span>
+            </div>
+            <div class="p-3 rounded border border-stone-200 bg-stone-50 text-left flex flex-col justify-between h-24 opacity-60">
+              <span class="font-semibold text-stone-500 text-xs">Meja 07</span>
+              <span class="text-xs text-stone-400 text-center">Kosong</span>
+              <span class="text-[10px] text-stone-400">-</span>
+            </div>
+            <div class="p-3 rounded border border-stone-200 bg-stone-50 text-left flex flex-col justify-between h-24 opacity-60">
+              <span class="font-semibold text-stone-500 text-xs">Meja 08</span>
+              <span class="text-xs text-stone-400 text-center">Kosong</span>
+              <span class="text-[10px] text-stone-400">-</span>
+            </div>
+          </div>
+
+          <!-- Quick Action Buttons -->
+          <div class="pt-3 border-t border-stone-200 grid grid-cols-3 gap-2 text-xs">
+            <button onclick="promptAction('Pindah Meja')" class="py-2 px-3 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold rounded border border-stone-300 touch-target">
+              Pindah Meja
+            </button>
+            <button onclick="promptAction('Void Pesanan')" class="py-2 px-3 bg-rose-50 hover:bg-rose-100 text-rose-800 font-semibold rounded border border-rose-300 touch-target">
+              Batalkan (Void)
+            </button>
+            <button onclick="promptAction('Switch Menu Habis')" class="py-2 px-3 bg-stone-100 hover:bg-stone-200 text-stone-800 font-semibold rounded border border-stone-300 touch-target">
+              Menu Habis
+            </button>
+          </div>
+        </div>
+
+        <!-- Right: Active Bill Panel -->
+        <div class="lg:col-span-5 bg-white border border-stone-200 rounded-lg p-4 shadow-sm flex flex-col justify-between space-y-4">
+          <div class="space-y-3">
+            <div class="flex justify-between items-start pb-3 border-b border-stone-200">
+              <div>
+                <div class="flex items-center gap-2">
+                  <span class="bg-stone-900 text-white font-bold text-xs px-2 py-0.5 rounded">MEJA 05</span>
+                  <h3 class="text-sm font-bold text-stone-900">Rincian Tagihan</h3>
+                </div>
+                <p class="text-xs text-stone-500 mt-0.5">Dibuka: 14:10 • Atas Nama: Rian</p>
+              </div>
+              <button onclick="window.print()" class="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 border border-stone-300 px-2.5 py-1.5 rounded touch-target font-medium" aria-label="Cetak Struk Sementara">
+                Cetak Bon
+              </button>
+            </div>
+
+            <!-- Multi-round items breakdown -->
+            <div class="space-y-3 max-h-60 overflow-y-auto pr-1 text-xs">
+              
+              <!-- Round 1 -->
+              <div class="border border-stone-200 rounded p-2.5 bg-stone-50">
+                <div class="flex justify-between text-[11px] font-bold text-stone-600 mb-1.5">
+                  <span>Pesanan Awal (14:10)</span>
+                  <span class="text-emerald-700">Tersaji di meja</span>
+                </div>
+                <div class="space-y-1.5">
+                  <div class="flex justify-between">
+                    <div>
+                      <span class="font-semibold text-stone-900">2x</span> Kopi Aren Senja
+                      <div class="text-[11px] text-stone-600">Catatan: Less ice, gula aren 50%</div>
+                    </div>
+                    <span class="font-mono-num font-semibold text-stone-900">44.000</span>
+                  </div>
+                  <div class="flex justify-between">
+                    <div>
+                      <span class="font-semibold text-stone-900">1x</span> Butter Croissant
+                    </div>
+                    <span class="font-mono-num font-semibold text-stone-900">28.000</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Round 2 -->
+              <div class="border border-amber-300 rounded p-2.5 bg-amber-50/50">
+                <div class="flex justify-between text-[11px] font-bold text-amber-900 mb-1.5">
+                  <span>Pesanan Tambahan (14:32)</span>
+                  <span class="text-sky-700">Sedang Dimasak</span>
+                </div>
+                <div class="flex justify-between">
+                  <div>
+                    <span class="font-semibold text-stone-900">1x</span> Nasi Goreng Sei Sapi
+                    <div class="text-[11px] text-stone-600">Catatan: Pedas sedang</div>
+                  </div>
+                  <span class="font-mono-num font-semibold text-stone-900">39.000</span>
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Price Calculations -->
+            <div class="pt-3 border-t border-stone-200 space-y-1 text-xs text-stone-700">
+              <div class="flex justify-between">
+                <span>Subtotal Menu:</span>
+                <span class="font-mono-num">111.000</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Pajak Restoran PB1 (10%):</span>
+                <span class="font-mono-num">11.100</span>
+              </div>
+              <div class="flex justify-between text-sm font-bold text-stone-950 pt-2 border-t border-stone-200">
+                <span>Total Pembayaran:</span>
+                <span class="font-mono-num text-base text-amber-800">Rp 122.100</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Checkout & Settlement Actions -->
+          <div class="space-y-2 pt-2 border-t border-stone-200">
+            <div class="grid grid-cols-2 gap-2 text-xs">
+              <button onclick="handlePaymentMethod('Tunai')" class="py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-900 font-bold border border-stone-300 rounded touch-target">
+                Bayar Tunai
+              </button>
+              <button onclick="handlePaymentMethod('QRIS Statis')" class="py-2.5 bg-stone-100 hover:bg-stone-200 text-stone-900 font-bold border border-stone-300 rounded touch-target">
+                QRIS Kasir
+              </button>
+            </div>
+            <button onclick="settleAndCloseTable(5)" class="w-full py-3 bg-amber-700 hover:bg-amber-800 text-white font-bold text-sm rounded shadow-sm transition touch-target">
+              Selesaikan Transaksi &amp; Tutup Meja
+            </button>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Table Stream View (Alternative for Fast Processing) -->
+      <div id="cashier-stream-layout" class="bg-white border border-stone-200 rounded-lg p-4 shadow-sm space-y-3 hidden">
+        <div class="flex justify-between items-center pb-2 border-b border-stone-200">
+          <div>
+            <h3 class="text-sm font-bold text-stone-900">Antrean Pesanan Masuk (Urutan Waktu Detik)</h3>
+            <p class="text-xs text-stone-500">Gunakan layar ini di area barista/dapur untuk memproses tiket pesanan.</p>
+          </div>
+          <span class="text-xs text-stone-600">3 Pesanan Aktif</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-stone-100 text-stone-700 uppercase border-b border-stone-200">
+              <tr>
+                <th scope="col" class="py-2.5 px-3">Jam</th>
+                <th scope="col" class="py-2.5 px-3">Meja</th>
+                <th scope="col" class="py-2.5 px-3">Rincian Menu</th>
+                <th scope="col" class="py-2.5 px-3">Total</th>
+                <th scope="col" class="py-2.5 px-3">Status</th>
+                <th scope="col" class="py-2.5 px-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-200 text-stone-900">
+              <tr class="hover:bg-stone-50">
+                <td class="py-3 px-3 font-mono-num text-stone-600">14:32:15</td>
+                <td class="py-3 px-3 font-bold">Meja 05</td>
+                <td class="py-3 px-3">
+                  <div class="font-semibold">1x Nasi Goreng Sei Sapi</div>
+                  <div class="text-[11px] text-stone-600">Catatan: Pedas sedang</div>
+                </td>
+                <td class="py-3 px-3 font-mono-num">39.000</td>
+                <td class="py-3 px-3"><span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-semibold text-[11px]">Baru Masuk</span></td>
+                <td class="py-3 px-3 text-right">
+                  <button class="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded font-bold touch-target">Mulai Masak</button>
+                </td>
+              </tr>
+              <tr class="hover:bg-stone-50">
+                <td class="py-3 px-3 font-mono-num text-stone-600">14:26:02</td>
+                <td class="py-3 px-3 font-bold">Meja 02</td>
+                <td class="py-3 px-3">
+                  <div class="font-semibold">1x Americano Double Shot</div>
+                </td>
+                <td class="py-3 px-3 font-mono-num">22.000</td>
+                <td class="py-3 px-3"><span class="bg-sky-100 text-sky-900 px-2 py-0.5 rounded font-semibold text-[11px]">Sedang Dimasak</span></td>
+                <td class="py-3 px-3 text-right">
+                  <button class="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold touch-target">Siap Saji</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- PORTAL CUSTOMER (Mobile-First Web Ordering) -->
+    <!-- ============================================================== -->
+    <section id="view-customer" class="space-y-4 hidden" aria-labelledby="heading-customer">
+      <div class="bg-white border border-stone-200 p-4 rounded-lg shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div>
+          <h2 id="heading-customer" class="text-base font-bold text-stone-900">Katalog Pesanan Mandiri (Self-Ordering)</h2>
+          <p class="text-xs text-stone-600 mt-0.5">Tampilan web browser di smartphone pelanggan setelah memindai QR meja.</p>
+        </div>
+        <span class="text-xs bg-stone-100 text-stone-700 border border-stone-300 px-2.5 py-1 rounded">Sesi Meja 05 Sah</span>
+      </div>
+
+      <!-- Mobile Container Frame -->
+      <div class="flex justify-center">
+        <div class="w-full max-w-sm bg-white border border-stone-300 rounded-2xl overflow-hidden shadow-md flex flex-col relative min-h-[640px]">
+          
+          <!-- Mobile App Header -->
+          <div class="p-4 bg-stone-900 text-white flex justify-between items-center">
+            <div>
+              <span class="bg-amber-700 text-white font-bold text-[10px] px-2 py-0.5 rounded">MEJA 05</span>
+              <h3 class="text-sm font-bold mt-1 text-white">Kafe Senja Kopi</h3>
+              <p class="text-[11px] text-stone-300">Pesan langsung ke dapur, bayar di kasir saat selesai.</p>
+            </div>
+          </div>
+
+          <!-- Category Filter Bar -->
+          <nav aria-label="Kategori Menu" class="p-2.5 bg-stone-100 border-b border-stone-200 flex gap-1.5 overflow-x-auto text-xs">
+            <button class="px-3 py-1.5 rounded-full bg-stone-900 text-white font-medium whitespace-nowrap touch-target">Kopi Signature</button>
+            <button class="px-3 py-1.5 rounded-full bg-white text-stone-700 border border-stone-300 font-medium whitespace-nowrap touch-target">Makanan Berat</button>
+            <button class="px-3 py-1.5 rounded-full bg-white text-stone-700 border border-stone-300 font-medium whitespace-nowrap touch-target">Cemilan</button>
+          </nav>
+
+          <!-- Menu Catalog Items -->
+          <div class="flex-1 p-3 space-y-3 pb-24 overflow-y-auto">
+            
+            <!-- Menu Card 1 -->
+            <div class="border border-stone-200 rounded-lg p-3 bg-white flex justify-between items-start gap-3">
+              <div class="flex-1">
+                <h4 class="text-xs font-bold text-stone-900">Kopi Aren Senja</h4>
+                <p class="text-[11px] text-stone-600 mt-0.5">Espresso ganda, susu segar pasteurisasi, sirup aren alami.</p>
+                <div class="text-xs font-bold font-mono-num text-stone-900 mt-1.5">Rp 22.000</div>
+              </div>
+              <button onclick="addItemToCustomerCart('Kopi Aren Senja', 22000)" class="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs rounded touch-target">
+                Tambah
+              </button>
+            </div>
+
+            <!-- Menu Card 2 -->
+            <div class="border border-stone-200 rounded-lg p-3 bg-white flex justify-between items-start gap-3">
+              <div class="flex-1">
+                <h4 class="text-xs font-bold text-stone-900">Butter Croissant</h4>
+                <p class="text-[11px] text-stone-600 mt-0.5">Pastry mentega renyah dipanggang setiap pagi.</p>
+                <div class="text-xs font-bold font-mono-num text-stone-900 mt-1.5">Rp 28.000</div>
+              </div>
+              <button onclick="addItemToCustomerCart('Butter Croissant', 28000)" class="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white font-bold text-xs rounded touch-target">
+                Tambah
+              </button>
+            </div>
+
+            <!-- Menu Card 3 (Sold out) -->
+            <div class="border border-stone-200 rounded-lg p-3 bg-stone-50 flex justify-between items-start gap-3 opacity-60">
+              <div class="flex-1">
+                <h4 class="text-xs font-bold text-stone-600">Nasi Sei Sapi</h4>
+                <p class="text-[11px] text-stone-500 mt-0.5">Daging asap aroma kayu dengan sambal matah Bali.</p>
+                <div class="text-xs font-bold font-mono-num text-stone-500 mt-1.5">Rp 39.000</div>
+              </div>
+              <span class="text-[11px] bg-stone-200 text-stone-700 px-2 py-1 rounded font-medium">Habis</span>
+            </div>
+
+          </div>
+
+          <!-- Bottom Sticky Cart Action -->
+          <div class="p-3 bg-white border-t border-stone-200 shadow-lg flex items-center justify-between">
+            <div>
+              <div class="text-[11px] font-bold text-stone-500">2 PESANAN DI KERANJANG</div>
+              <div class="text-sm font-bold font-mono-num text-stone-950">Rp 50.000</div>
+            </div>
+            <button onclick="submitCustomerOrder()" class="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target shadow-sm">
+              Kirim ke Dapur
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============================================================== -->
+    <!-- PORTAL ADMIN / PEMILIK KAFE -->
+    <!-- ============================================================== -->
+    <section id="view-admin" class="space-y-4 hidden" aria-labelledby="heading-admin">
+      <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 bg-white border border-stone-200 p-4 rounded-lg shadow-sm">
+        <div>
+          <h2 id="heading-admin" class="text-base font-bold text-stone-900">Portal Pemilik &amp; Pengelolaan Menu</h2>
+          <p class="text-xs text-stone-600 mt-0.5">Pantau ringkasan omzet kasir harian dan kendali stok bahan baku.</p>
+        </div>
+        <div class="flex gap-2">
+          <button onclick="downloadCSVReport()" class="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded border border-stone-300 touch-target">
+            Unduh CSV
+          </button>
+          <button onclick="promptAction('Tambah Menu')" class="px-3 py-1.5 bg-stone-900 hover:bg-stone-800 text-white text-xs font-semibold rounded touch-target">
+            + Tambah Menu
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 Financial Metric Cards -->
+      <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <div class="bg-white border border-stone-200 p-3.5 rounded-lg shadow-sm">
+          <div class="text-xs text-stone-600 font-medium">Omzet Penjualan Hari Ini</div>
+          <div class="text-lg font-bold font-mono-num text-stone-900 mt-1">Rp 2.450.000</div>
+          <div class="text-[11px] text-stone-500 mt-0.5">42 Transaksi selesai</div>
+        </div>
+        <div class="bg-white border border-stone-200 p-3.5 rounded-lg shadow-sm">
+          <div class="text-xs text-stone-600 font-medium">Pembayaran Tunai</div>
+          <div class="text-lg font-bold font-mono-num text-stone-900 mt-1">Rp 1.250.000</div>
+          <div class="text-[11px] text-stone-500 mt-0.5">Uang fisik di kasir</div>
+        </div>
+        <div class="bg-white border border-stone-200 p-3.5 rounded-lg shadow-sm">
+          <div class="text-xs text-stone-600 font-medium">Pembayaran QRIS Kasir</div>
+          <div class="text-lg font-bold font-mono-num text-stone-900 mt-1">Rp 1.200.000</div>
+          <div class="text-[11px] text-stone-500 mt-0.5">Rekening penampungan</div>
+        </div>
+        <div class="bg-white border border-amber-300 bg-amber-50/40 p-3.5 rounded-lg shadow-sm">
+          <div class="text-xs text-amber-900 font-medium">Peringatan Stok Menipis</div>
+          <div class="text-lg font-bold font-mono-num text-amber-900 mt-1">2 Menu</div>
+          <div class="text-[11px] text-amber-800 mt-0.5">Croissant (3), Matcha (2)</div>
+        </div>
+      </div>
+
+      <!-- Product Availability Switcher -->
+      <div class="bg-white border border-stone-200 rounded-lg p-4 shadow-sm space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-stone-200">
+          <h3 class="text-xs font-bold text-stone-900 uppercase tracking-wider">Inventaris &amp; Saklar Ketersediaan Menu</h3>
+          <span class="text-xs text-stone-500">Perubahan langsung berlaku di web pemesanan meja</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="bg-stone-100 text-stone-700 uppercase border-b border-stone-200">
+              <tr>
+                <th scope="col" class="py-2.5 px-3">Nama Produk</th>
+                <th scope="col" class="py-2.5 px-3">Kategori</th>
+                <th scope="col" class="py-2.5 px-3">Harga</th>
+                <th scope="col" class="py-2.5 px-3">Sisa Stok</th>
+                <th scope="col" class="py-2.5 px-3">Status Jual</th>
+                <th scope="col" class="py-2.5 px-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-stone-200 text-stone-900">
+              <tr>
+                <td class="py-2.5 px-3 font-semibold">Kopi Aren Senja</td>
+                <td class="py-2.5 px-3 text-stone-600">Signature</td>
+                <td class="py-2.5 px-3 font-mono-num">22.000</td>
+                <td class="py-2.5 px-3 font-mono-num">45</td>
+                <td class="py-2.5 px-3"><span class="bg-emerald-100 text-emerald-900 px-2 py-0.5 rounded font-medium">Aktif</span></td>
+                <td class="py-2.5 px-3 text-right">
+                  <button onclick="toggleAvailability(this)" class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded text-stone-800 touch-target font-medium">Tandai Habis</button>
+                </td>
+              </tr>
+              <tr>
+                <td class="py-2.5 px-3 font-semibold">Butter Croissant</td>
+                <td class="py-2.5 px-3 text-stone-600">Pastry</td>
+                <td class="py-2.5 px-3 font-mono-num">28.000</td>
+                <td class="py-2.5 px-3 font-mono-num text-amber-800 font-bold">3</td>
+                <td class="py-2.5 px-3"><span class="bg-amber-100 text-amber-900 px-2 py-0.5 rounded font-medium">Menipis</span></td>
+                <td class="py-2.5 px-3 text-right">
+                  <button onclick="toggleAvailability(this)" class="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded text-stone-800 touch-target font-medium">Tandai Habis</button>
+                </td>
+              </tr>
+              <tr class="opacity-60 bg-stone-50">
+                <td class="py-2.5 px-3 font-semibold">Nasi Sei Sapi</td>
+                <td class="py-2.5 px-3 text-stone-600">Makanan Berat</td>
+                <td class="py-2.5 px-3 font-mono-num">39.000</td>
+                <td class="py-2.5 px-3 font-mono-num">0</td>
+                <td class="py-2.5 px-3"><span class="bg-rose-100 text-rose-900 px-2 py-0.5 rounded font-medium">Habis</span></td>
+                <td class="py-2.5 px-3 text-right">
+                  <button onclick="toggleAvailability(this)" class="px-2.5 py-1 bg-stone-200 hover:bg-stone-300 border border-stone-300 rounded text-stone-800 touch-target font-medium">Aktifkan Kembali</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Notification Toast Container -->
+  <aside id="toast" class="fixed bottom-4 right-4 bg-stone-900 text-white text-xs px-4 py-3 rounded-lg shadow-lg hidden transition" role="status" aria-live="polite">
+    Aksi berhasil dijalankan.
+  </aside>
+
+  <!-- Interactive Script -->
+  <script>
+    function setRole(role) {
+      document.getElementById('view-cashier').classList.add('hidden');
+      document.getElementById('view-customer').classList.add('hidden');
+      document.getElementById('view-admin').classList.add('hidden');
+
+      const tabs = ['customer', 'cashier', 'admin'];
+      tabs.forEach(t => {
+        const btn = document.getElementById('tab-' + t);
+        btn.className = "px-3 py-1.5 rounded font-medium text-stone-300 hover:text-white transition touch-target";
+        btn.setAttribute('aria-selected', 'false');
+      });
+
+      document.getElementById('view-' + role).classList.remove('hidden');
+      const activeBtn = document.getElementById('tab-' + role);
+      activeBtn.className = "px-3 py-1.5 rounded font-bold bg-amber-700 text-white shadow-sm transition touch-target";
+      activeBtn.setAttribute('aria-selected', 'true');
+    }
+
+    function setCashierDisplay(mode) {
+      const split = document.getElementById('cashier-split-layout');
+      const stream = document.getElementById('cashier-stream-layout');
+      const btnSplit = document.getElementById('btn-disp-split');
+      const btnTable = document.getElementById('btn-disp-table');
+
+      if (mode === 'split') {
+        split.classList.remove('hidden');
+        stream.classList.add('hidden');
+        btnSplit.className = "px-3 py-1.5 rounded font-bold bg-white text-stone-900 shadow-sm border border-stone-200";
+        btnTable.className = "px-3 py-1.5 rounded text-stone-600 hover:text-stone-900";
+      } else {
+        split.classList.add('hidden');
+        stream.classList.remove('hidden');
+        btnTable.className = "px-3 py-1.5 rounded font-bold bg-white text-stone-900 shadow-sm border border-stone-200";
+        btnSplit.className = "px-3 py-1.5 rounded text-stone-600 hover:text-stone-900";
+      }
+    }
+
+    function showToast(message) {
+      const toast = document.getElementById('toast');
+      toast.textContent = message;
+      toast.classList.remove('hidden');
+      setTimeout(() => {
+        toast.classList.add('hidden');
+      }, 3000);
+    }
+
+    function selectOrderTable(num) {
+      setRole('cashier');
+      setCashierDisplay('split');
+      showToast("Membuka bon transaksi Meja 0" + num);
+    }
+
+    function handlePaymentMethod(method) {
+      showToast("Metode pembayaran dipilih: " + method);
+    }
+
+    function settleAndCloseTable(num) {
+      showToast("Transaksi Meja 0" + num + " lunas. Meja kembali kosong.");
+    }
+
+    function addItemToCustomerCart(name, price) {
+      showToast(name + " ditambahkan ke keranjang pesanan.");
+    }
+
+    function submitCustomerOrder() {
+      showToast("Pesanan berhasil dikirim ke dapur. Status: Menunggu Konfirmasi.");
+    }
+
+    function toggleAvailability(btn) {
+      const isHabis = btn.textContent === "Tandai Habis";
+      btn.textContent = isHabis ? "Aktifkan Kembali" : "Tandai Habis";
+      showToast("Status menu diperbarui.");
+    }
+
+    function openCashModal() {
+      showToast("Total kas laci shift aktif: Rp 1.450.000");
+    }
+
+    function promptAction(action) {
+      showToast("Aksi " + action + " diaktifkan.");
+    }
+
+    function downloadCSVReport() {
+      showToast("Mengunduh berkas laporan_transaksi_harian.csv");
+    }
+  </script>
+</body>
+</html>
