@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>POS Kafe - Mockup V2 (Desain Gabungan Terpilih)</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+    .hide-scrollbar::-webkit-scrollbar { display: none; }
+    .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen">
+
+  <!-- Main Top Bar -->
+  <header class="border-b border-slate-800 bg-slate-900/90 backdrop-blur sticky top-0 z-50 px-6 py-4">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+      <div>
+        <div class="flex items-center gap-2">
+          <span class="bg-emerald-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded">MOCKUP V2 • HYBRID FINAL</span>
+          <h1 class="text-xl font-bold tracking-tight text-white">Desain Sistem POS Terpadu</h1>
+        </div>
+        <p class="text-xs text-slate-400 mt-1">Gabungan Customer Visual (Opsi 1) + Kasir Table Grid &amp; Live Stream (Opsi 2 + 3) + Admin Metric Cards (Opsi 1).</p>
+      </div>
+
+      <!-- Role Navigation Switcher -->
+      <div class="flex items-center bg-slate-950 p-1.5 rounded-xl border border-slate-800 text-sm">
+        <button onclick="showRole('customer')" id="btn-customer" class="px-3.5 py-1.5 rounded-lg font-semibold transition-all text-slate-400 hover:text-white">
+          <i class="fa-solid fa-mobile-screen mr-1 text-amber-400"></i> Customer (HP)
+        </button>
+        <button onclick="showRole('cashier')" id="btn-cashier" class="px-3.5 py-1.5 rounded-lg font-semibold transition-all bg-emerald-500 text-slate-950 shadow-md">
+          <i class="fa-solid fa-cash-register mr-1"></i> Kasir &amp; Live Stream
+        </button>
+        <button onclick="showRole('admin')" id="btn-admin" class="px-3.5 py-1.5 rounded-lg font-semibold transition-all text-slate-400 hover:text-white">
+          <i class="fa-solid fa-chart-pie mr-1 text-sky-400"></i> Admin / Owner
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <main class="max-w-7xl mx-auto p-6 space-y-6">
+
+    <!-- =================================================================== -->
+    <!-- 1. ROLE KASIR (DEFAULT VIEW): TABLE GRID + ORDER STREAM HYBRID -->
+    <!-- =================================================================== -->
+    <section id="role-cashier" class="space-y-4">
+      <!-- Sub-header bar for Cashier -->
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div class="flex items-center gap-3">
+          <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
+            <i class="fa-solid fa-store"></i>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <h2 class="text-sm font-bold text-white">Kasir Senja Kopi • Shift Pagi (Bima Adji)</h2>
+              <span class="text-[10px] bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded-full flex items-center gap-1">
+                <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span> SSE Live Online
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Denah meja interaktif + Stream pesanan masuk realtime dari HP meja customer.</p>
+          </div>
+        </div>
+
+        <div class="flex items-center gap-2">
+          <!-- View switcher inside cashier (Split view or full stream) -->
+          <div class="bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs flex">
+            <button onclick="toggleCashierMode('hybrid')" id="cmode-hybrid" class="px-3 py-1.5 rounded-lg font-bold bg-slate-800 text-white">
+              <i class="fa-solid fa-table-columns mr-1"></i> Mode Meja &amp; Billing
+            </button>
+            <button onclick="toggleCashierMode('stream')" id="cmode-stream" class="px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white">
+              <i class="fa-solid fa-bars-staggered mr-1"></i> Live Stream Penuh (10)
+            </button>
+          </div>
+
+          <button class="bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold px-3 py-2 rounded-xl border border-slate-700 flex items-center gap-1.5">
+            <i class="fa-solid fa-wallet"></i> Kas Laci: Rp 1.450.000
+          </button>
+        </div>
+      </div>
+
+      <!-- CASHIER HYBRID VIEW: LEFT TABLE GRID + RIGHT BILLING + BOTTOM LIVE STREAM TICKER -->
+      <div id="cashier-hybrid-container" class="space-y-4">
+        
+        <!-- Live Order Notification Ticker (From Option 3 concept) -->
+        <div class="bg-slate-900 border border-amber-500/40 rounded-xl p-3 flex items-center justify-between gap-4 shadow-lg shadow-amber-500/5">
+          <div class="flex items-center gap-3 overflow-hidden">
+            <span class="bg-amber-500 text-slate-950 font-black text-[10px] px-2 py-1 rounded flex items-center gap-1 flex-shrink-0 animate-pulse">
+              <i class="fa-solid fa-bell"></i> LIVE ORDER BARU
+            </span>
+            <div class="text-xs text-slate-300 truncate">
+              <b class="text-white">Meja 05:</b> 2x Kopi Aren Senja (Less ice), 1x Croissant Butter • <span class="text-amber-400 font-mono font-bold">Rp 79.200</span>
+              <span class="text-[10px] text-slate-500 ml-2">12 detik lalu</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-shrink-0">
+            <button onclick="selectSpecificTable(5)" class="px-3 py-1 bg-amber-500 hover:bg-amber-400 text-slate-950 font-black text-xs rounded-lg transition">
+              Buka Meja 05 ➔
+            </button>
+          </div>
+        </div>
+
+        <!-- Split Grid (Table Denah Left + Billing Panel Right) -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4 items-start">
+          
+          <!-- LEFT: TABLE GRID (Col 7) -->
+          <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-3">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+              <div class="flex items-center gap-2">
+                <i class="fa-solid fa-border-all text-emerald-400 text-sm"></i>
+                <h3 class="text-xs font-bold text-white uppercase tracking-wider">Denah Meja Resto (12 Meja)</h3>
+              </div>
+              <div class="flex items-center gap-3 text-[11px]">
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-slate-700"></span> Kosong (8)</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-amber-400"></span> Makan (3)</span>
+                <span class="flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-sky-400"></span> Baru (1)</span>
+              </div>
+            </div>
+
+            <!-- Table Buttons Grid -->
+            <div class="grid grid-cols-3 sm:grid-cols-4 gap-2.5">
+              
+              <!-- Table 1 (Eating) -->
+              <div onclick="selectSpecificTable(1)" class="p-3 rounded-xl border border-slate-700 bg-slate-850 hover:border-amber-400/80 cursor-pointer transition flex flex-col justify-between h-24">
+                <div class="flex justify-between text-xs font-bold"><span class="text-white">Meja 01</span><span class="w-2 h-2 rounded-full bg-amber-400"></span></div>
+                <div><div class="text-[10px] text-slate-400">2 Item</div><div class="text-xs font-bold text-slate-200 font-mono">Rp 50.000</div></div>
+                <span class="text-[9px] bg-slate-800 text-amber-400 font-semibold px-1 rounded">Belum Bayar</span>
+              </div>
+
+              <!-- Table 2 (Cooking) -->
+              <div onclick="selectSpecificTable(2)" class="p-3 rounded-xl border border-sky-500/60 bg-sky-950/20 hover:border-sky-400 cursor-pointer transition flex flex-col justify-between h-24">
+                <div class="flex justify-between text-xs font-bold"><span class="text-white">Meja 02</span><span class="w-2 h-2 rounded-full bg-sky-400"></span></div>
+                <div><div class="text-[10px] text-sky-300">1 Item</div><div class="text-xs font-bold text-white font-mono">Rp 22.000</div></div>
+                <span class="text-[9px] bg-sky-500/20 text-sky-300 font-semibold px-1 rounded">Dimasak</span>
+              </div>
+
+              <!-- Table 3 (Empty) -->
+              <div class="p-3 rounded-xl border border-slate-800 bg-slate-950/40 opacity-40 flex flex-col justify-between h-24">
+                <span class="text-xs font-bold text-slate-400">Meja 03</span>
+                <span class="text-xs text-slate-600 text-center">Kosong</span>
+                <span></span>
+              </div>
+
+              <!-- Table 4 (Empty) -->
+              <div class="p-3 rounded-xl border border-slate-800 bg-slate-950/40 opacity-40 flex flex-col justify-between h-24">
+                <span class="text-xs font-bold text-slate-400">Meja 04</span>
+                <span class="text-xs text-slate-600 text-center">Kosong</span>
+                <span></span>
+              </div>
+
+              <!-- Table 5 (ACTIVE SELECTED) -->
+              <div onclick="selectSpecificTable(5)" class="p-3 rounded-xl border-2 border-emerald-400 bg-emerald-500/10 ring-2 ring-emerald-500/30 flex flex-col justify-between h-24 cursor-pointer shadow-lg">
+                <div class="flex justify-between text-xs font-black"><span class="text-emerald-300">Meja 05 ★</span><span class="w-2 h-2 rounded-full bg-emerald-400"></span></div>
+                <div><div class="text-[10px] text-emerald-200">3 Item (2 Round)</div><div class="text-xs font-black text-white font-mono">Rp 122.100</div></div>
+                <span class="text-[9px] bg-emerald-500 text-slate-950 font-black px-1 rounded text-center">Sedang Terpilih</span>
+              </div>
+
+              <!-- Table 6 to 12 empty -->
+              <div class="p-3 rounded-xl border border-slate-800 bg-slate-950/40 opacity-40 flex flex-col justify-between h-24">
+                <span class="text-xs font-bold text-slate-400">Meja 06</span>
+                <span class="text-xs text-slate-600 text-center">Kosong</span>
+                <span></span>
+              </div>
+              <div class="p-3 rounded-xl border border-slate-800 bg-slate-950/40 opacity-40 flex flex-col justify-between h-24">
+                <span class="text-xs font-bold text-slate-400">Meja 07</span>
+                <span class="text-xs text-slate-600 text-center">Kosong</span>
+                <span></span>
+              </div>
+              <div class="p-3 rounded-xl border border-slate-800 bg-slate-950/40 opacity-40 flex flex-col justify-between h-24">
+                <span class="text-xs font-bold text-slate-400">Meja 08</span>
+                <span class="text-xs text-slate-600 text-center">Kosong</span>
+                <span></span>
+              </div>
+            </div>
+
+            <!-- Quick Action Buttons for Table -->
+            <div class="pt-3 border-t border-slate-800 grid grid-cols-3 gap-2 text-xs">
+              <button class="py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-arrows-split-up-and-left text-sky-400"></i> Pindah Meja
+              </button>
+              <button class="py-2 bg-slate-800 hover:bg-slate-700 text-rose-400 font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-ban"></i> Void (Batal)
+              </button>
+              <button class="py-2 bg-slate-800 hover:bg-slate-700 text-amber-400 font-semibold rounded-lg flex items-center justify-center gap-1.5">
+                <i class="fa-solid fa-toggle-on"></i> Menu Habis
+              </button>
+            </div>
+          </div>
+
+          <!-- RIGHT: BILLING PANEL (Col 5) -->
+          <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between space-y-4">
+            <div>
+              <div class="flex justify-between items-start pb-3 border-b border-slate-800">
+                <div>
+                  <div class="flex items-center gap-2">
+                    <span class="bg-emerald-500 text-slate-950 font-black text-xs px-2 py-0.5 rounded">MEJA 05</span>
+                    <h3 class="text-sm font-bold text-white">Bon Pesanan Meja</h3>
+                  </div>
+                  <p class="text-[11px] text-slate-400 mt-0.5">Buka sejak 14:10 • Customer: Rian</p>
+                </div>
+                <button class="text-xs text-slate-300 bg-slate-800 hover:bg-slate-700 p-2 rounded-lg" title="Cetak Bon Sementara">
+                  <i class="fa-solid fa-print"></i>
+                </button>
+              </div>
+
+              <!-- Multi-Round Items List -->
+              <div class="space-y-3 pt-3 max-h-56 overflow-y-auto hide-scrollbar text-xs">
+                
+                <!-- Round 1 -->
+                <div>
+                  <div class="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-1 flex justify-between">
+                    <span>Babak 1 (14:10)</span>
+                    <span class="text-emerald-400">✓ Tersaji</span>
+                  </div>
+                  <div class="space-y-1.5 bg-slate-850 p-2 rounded-lg border border-slate-800">
+                    <div class="flex justify-between">
+                      <div>
+                        <span class="font-bold text-white">2x</span> Kopi Aren Senja
+                        <div class="text-[10px] text-amber-400 italic">"Less ice, less sugar"</div>
+                      </div>
+                      <span class="font-mono text-slate-300">44.000</span>
+                    </div>
+                    <div class="flex justify-between">
+                      <div><span class="font-bold text-white">1x</span> Croissant Butter</div>
+                      <span class="font-mono text-slate-300">28.000</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Round 2 (Recent Add) -->
+                <div>
+                  <div class="text-[10px] font-bold text-amber-400 uppercase tracking-wider mb-1 flex justify-between">
+                    <span>Babak 2 (14:32 - Baru Tambah)</span>
+                    <span class="text-sky-400">🍳 Dimasak</span>
+                  </div>
+                  <div class="space-y-1.5 bg-amber-500/10 p-2 rounded-lg border border-amber-500/30">
+                    <div class="flex justify-between">
+                      <div>
+                        <span class="font-bold text-white">1x</span> Nasi Goreng Sei Sapi
+                        <div class="text-[10px] text-amber-300 italic">"Pedas sedang ya"</div>
+                      </div>
+                      <span class="font-mono text-amber-300 font-bold">39.000</span>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Calculation breakdown -->
+              <div class="pt-3 border-t border-slate-800 space-y-1 text-xs text-slate-300">
+                <div class="flex justify-between"><span class="text-slate-400">Subtotal</span><span class="font-mono">111.000</span></div>
+                <div class="flex justify-between"><span class="text-slate-400">Pajak Restoran PB1 (10%)</span><span class="font-mono">11.100</span></div>
+                <div class="flex justify-between text-sm font-bold text-white pt-2 border-t border-slate-800">
+                  <span>Grand Total</span>
+                  <span class="text-emerald-400 text-base font-mono">Rp 122.100</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Payment Action Box -->
+            <div class="space-y-2 pt-2 border-t border-slate-800">
+              <div class="grid grid-cols-2 gap-2 text-xs">
+                <button class="py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold border border-slate-700 flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-money-bill-wave text-emerald-400"></i> Tunai
+                </button>
+                <button class="py-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-bold border border-slate-700 flex items-center justify-center gap-1.5">
+                  <i class="fa-solid fa-qrcode text-sky-400"></i> QRIS Statis
+                </button>
+              </div>
+
+              <button class="w-full py-3 bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-sm rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                <i class="fa-solid fa-check-circle"></i> Selesaikan Bayar &amp; Tutup Meja
+              </button>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+      <!-- CASHIER FULL STREAM VIEW (Toggleable - From Option 3) -->
+      <div id="cashier-stream-container" class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3 hidden">
+        <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-stream text-amber-400"></i>
+            <h3 class="text-sm font-bold text-white">Live Kitchen Order Stream (Semua Pesanan Berurutan Detik)</h3>
+          </div>
+          <span class="text-xs text-slate-400">Klik baris untuk langsung mengubah status masak atau bayar</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
+              <tr>
+                <th class="p-3">Waktu</th>
+                <th class="p-3">Meja</th>
+                <th class="p-3">Menu &amp; Catatan Khusus</th>
+                <th class="p-3">Total</th>
+                <th class="p-3">Status Saat Ini</th>
+                <th class="p-3 text-right">Aksi Cepat</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80">
+              <tr class="hover:bg-slate-850 bg-amber-500/5">
+                <td class="p-3 font-mono text-amber-400 font-bold">14:32:15</td>
+                <td class="p-3"><span class="bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded text-[10px]">MEJA 05</span></td>
+                <td class="p-3">
+                  <div class="font-bold text-white">2x Kopi Aren Senja, 1x Butter Croissant</div>
+                  <div class="text-[10px] text-amber-300 italic">"Less ice, less sugar"</div>
+                </td>
+                <td class="p-3 font-mono text-white font-bold">79.200</td>
+                <td class="p-3"><span class="text-[10px] bg-amber-500/20 text-amber-400 px-2.5 py-1 rounded-full font-bold">Baru Masuk</span></td>
+                <td class="p-3 text-right">
+                  <button class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">Mulai Masak</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-mono text-slate-400">14:26:02</td>
+                <td class="p-3"><span class="bg-slate-800 text-slate-200 font-bold px-2 py-0.5 rounded text-[10px]">MEJA 02</span></td>
+                <td class="p-3">
+                  <div class="font-bold text-white">1x Americano Double Shot (Hot)</div>
+                </td>
+                <td class="p-3 font-mono text-white font-bold">22.000</td>
+                <td class="p-3"><span class="text-[10px] bg-sky-500/20 text-sky-400 px-2.5 py-1 rounded-full font-bold">Sedang Dimasak</span></td>
+                <td class="p-3 text-right">
+                  <button class="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg text-xs">Siap Saji ✓</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-mono text-slate-400">14:10:45</td>
+                <td class="p-3"><span class="bg-slate-800 text-slate-200 font-bold px-2 py-0.5 rounded text-[10px]">MEJA 01</span></td>
+                <td class="p-3">
+                  <div class="font-bold text-white">2x Nasi Goreng Sei, 2x Es Teh Manis</div>
+                </td>
+                <td class="p-3 font-mono text-white font-bold">85.000</td>
+                <td class="p-3"><span class="text-[10px] bg-emerald-500/20 text-emerald-400 px-2.5 py-1 rounded-full font-bold">Sudah Tersaji</span></td>
+                <td class="p-3 text-right">
+                  <button class="bg-slate-800 hover:bg-slate-700 text-white font-bold px-3 py-1.5 rounded-lg text-xs">Terima Bayar</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =================================================================== -->
+    <!-- 2. ROLE CUSTOMER (OPSI 1: FOOD DELIVERY STYLE VISUAL) -->
+    <!-- =================================================================== -->
+    <section id="role-customer" class="space-y-4 hidden">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div>
+          <span class="text-[10px] font-black uppercase tracking-wider bg-amber-500 text-slate-950 px-2 py-0.5 rounded">CUSTOMER WEB (MOBILE-FIRST)</span>
+          <h2 class="text-sm font-bold text-white mt-1">Antarmuka Pelanggan di HP (Scan Stiker QR Meja)</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Tanpa install aplikasi, foto menu besar, modal preferensi/catatan rasa, dan bar keranjang melayang.</p>
+        </div>
+        <span class="text-xs text-amber-400 bg-amber-500/10 border border-amber-500/30 px-3 py-1 rounded-lg">Zero Friction • Signed Token Meja</span>
+      </div>
+
+      <div class="flex justify-center">
+        <!-- Phone Frame -->
+        <div class="w-full max-w-[380px] h-[720px] bg-slate-900 border-4 border-slate-800 rounded-[40px] overflow-hidden shadow-2xl flex flex-col relative">
+          
+          <!-- Phone Status Bar -->
+          <div class="bg-slate-900 px-6 pt-3 pb-2 flex justify-between text-[11px] text-slate-400 border-b border-slate-800/40">
+            <span class="font-bold">14:32</span>
+            <div class="flex gap-1.5 items-center">
+              <i class="fa-solid fa-signal text-[10px]"></i>
+              <i class="fa-solid fa-wifi text-[10px]"></i>
+              <i class="fa-solid fa-battery-full text-xs"></i>
+            </div>
+          </div>
+
+          <!-- Customer Hero Header -->
+          <div class="p-4 bg-slate-850 border-b border-slate-800 flex justify-between items-center">
+            <div>
+              <span class="text-[10px] bg-amber-500 text-slate-950 font-black px-2 py-0.5 rounded">MEJA 05</span>
+              <h3 class="text-sm font-bold text-white mt-1">Senja Coffee &amp; Eatery</h3>
+              <p class="text-[10px] text-slate-400">Pesan langsung dari mejamu, bayar nanti di kasir.</p>
+            </div>
+            <button class="w-9 h-9 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-xs text-amber-400">
+              <i class="fa-solid fa-receipt"></i>
+            </button>
+          </div>
+
+          <!-- Category Filter Pills -->
+          <div class="p-3 bg-slate-900 flex gap-2 overflow-x-auto hide-scrollbar border-b border-slate-800/60">
+            <span class="text-xs bg-amber-500 text-slate-950 font-bold px-3 py-1 rounded-full whitespace-nowrap cursor-pointer">Kopi Signature</span>
+            <span class="text-xs bg-slate-800 text-slate-300 font-medium px-3 py-1 rounded-full whitespace-nowrap cursor-pointer">Non-Kopi</span>
+            <span class="text-xs bg-slate-800 text-slate-300 font-medium px-3 py-1 rounded-full whitespace-nowrap cursor-pointer">Makanan Berat</span>
+            <span class="text-xs bg-slate-800 text-slate-300 font-medium px-3 py-1 rounded-full whitespace-nowrap cursor-pointer">Cemilan</span>
+          </div>
+
+          <!-- Menu Catalog Scrollable -->
+          <div class="flex-1 overflow-y-auto p-4 space-y-3 pb-28 hide-scrollbar">
+            
+            <!-- Menu Item 1 -->
+            <div class="bg-slate-850 border border-slate-700/80 p-3 rounded-2xl flex gap-3 items-center shadow">
+              <div class="w-18 h-18 rounded-xl bg-amber-950/40 border border-amber-500/30 flex items-center justify-center text-amber-400 text-2xl flex-shrink-0">
+                <i class="fa-solid fa-mug-saucer"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-1.5">
+                  <h4 class="text-xs font-bold text-white truncate">Kopi Aren Senja</h4>
+                  <span class="text-[9px] bg-amber-500/20 text-amber-300 font-bold px-1.5 rounded">FAVORIT</span>
+                </div>
+                <p class="text-[10px] text-slate-400 line-clamp-1 mt-0.5">Espresso, susu segar, gula aren organik</p>
+                <div class="text-xs font-bold text-amber-400 mt-1">Rp 22.000</div>
+              </div>
+              <button onclick="openNoteModal('Kopi Aren Senja')" class="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black flex items-center justify-center text-sm shadow">
+                +
+              </button>
+            </div>
+
+            <!-- Item Notes Simulation Box -->
+            <div class="bg-amber-500/10 border border-amber-500/30 p-2.5 rounded-xl space-y-1">
+              <div class="flex justify-between items-center text-[10px]">
+                <span class="font-bold text-amber-300">1x Kopi Aren Senja</span>
+                <span class="text-slate-400">Rp 22.000</span>
+              </div>
+              <div class="text-[10px] text-slate-300 bg-slate-950/70 p-1.5 rounded border border-slate-800 flex items-center gap-1.5">
+                <i class="fa-solid fa-pen text-[9px] text-amber-400"></i>
+                <span class="italic">"Catatan: Less ice, jangan terlalu manis"</span>
+              </div>
+            </div>
+
+            <!-- Menu Item 2 -->
+            <div class="bg-slate-850 border border-slate-700/80 p-3 rounded-2xl flex gap-3 items-center shadow">
+              <div class="w-18 h-18 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-slate-400 text-2xl flex-shrink-0">
+                <i class="fa-solid fa-bread-slice"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-bold text-white truncate">Butter Croissant</h4>
+                <p class="text-[10px] text-slate-400 line-clamp-1 mt-0.5">Pastry renyah dipanggang hangat tiap pagi</p>
+                <div class="text-xs font-bold text-amber-400 mt-1">Rp 28.000</div>
+              </div>
+              <button class="w-8 h-8 rounded-xl bg-amber-500 hover:bg-amber-400 text-slate-950 font-black flex items-center justify-center text-sm shadow">
+                +
+              </button>
+            </div>
+
+            <!-- Menu Item 3 (Sold Out) -->
+            <div class="bg-slate-900 border border-slate-800 p-3 rounded-2xl flex gap-3 items-center opacity-60">
+              <div class="w-18 h-18 rounded-xl bg-slate-800 flex items-center justify-center text-slate-500 text-2xl flex-shrink-0">
+                <i class="fa-solid fa-bowl-rice"></i>
+              </div>
+              <div class="flex-1 min-w-0">
+                <h4 class="text-xs font-bold text-slate-400 truncate">Nasi Sei Sapi</h4>
+                <p class="text-[10px] text-slate-500">Daging asap + sambal matah</p>
+                <div class="text-xs font-bold text-slate-500 mt-1">Rp 39.000</div>
+              </div>
+              <span class="text-[10px] bg-red-950 border border-red-500/40 text-red-400 font-bold px-2 py-1 rounded">HABIS</span>
+            </div>
+          </div>
+
+          <!-- Bottom Floating Checkout Drawer -->
+          <div class="absolute bottom-4 left-4 right-4 bg-gradient-to-r from-amber-500 to-amber-600 text-slate-950 p-3.5 rounded-2xl flex items-center justify-between shadow-2xl cursor-pointer">
+            <div>
+              <div class="text-xs font-black">2 ITEM PESANAN</div>
+              <div class="text-[11px] font-bold opacity-90">Rp 50.000 (Subtotal)</div>
+            </div>
+            <div class="flex items-center gap-1.5 text-xs font-black bg-slate-950/20 px-3 py-1.5 rounded-xl">
+              <span>Kirim ke Dapur</span>
+              <i class="fa-solid fa-arrow-right text-[10px]"></i>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+
+    <!-- =================================================================== -->
+    <!-- 3. ROLE ADMIN / OWNER (OPSI 1: METRIC CARDS + QUICK STOCK CONTROL) -->
+    <!-- =================================================================== -->
+    <section id="role-admin" class="space-y-4 hidden">
+      <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+        <div>
+          <span class="text-[10px] font-black uppercase tracking-wider bg-sky-500 text-slate-950 px-2 py-0.5 rounded">ADMIN &amp; OWNER PORTAL</span>
+          <h2 class="text-sm font-bold text-white mt-1">Dashboard Pemilik Kafe &amp; Manajemen Stok</h2>
+          <p class="text-xs text-slate-400 mt-0.5">Pantau omzet harian, performa produk, dan saklar stok menu habis secara instan.</p>
+        </div>
+        <div class="flex gap-2 text-xs">
+          <button class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold px-3 py-1.5 rounded-lg border border-slate-700">
+            <i class="fa-solid fa-file-csv mr-1"></i> Ekspor Laporan CSV
+          </button>
+          <button class="bg-sky-500 hover:bg-sky-400 text-slate-950 font-bold px-3 py-1.5 rounded-lg">
+            + Tambah Menu Baru
+          </button>
+        </div>
+      </div>
+
+      <!-- 4 High-Level Metric Cards -->
+      <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-1">
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Total Omzet Hari Ini</div>
+          <div class="text-2xl font-black text-amber-400 font-mono">Rp 2.450.000</div>
+          <div class="text-[10px] text-emerald-400 font-semibold flex items-center gap-1">
+            <i class="fa-solid fa-arrow-trend-up"></i> +12% dibanding kemarin
+          </div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-1">
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Transaksi Selesai</div>
+          <div class="text-2xl font-black text-white font-mono">42 Meja</div>
+          <div class="text-[10px] text-slate-400">Rata-rata Rp 58.300 / meja</div>
+        </div>
+
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-1">
+          <div class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Menu Terlaris</div>
+          <div class="text-xl font-black text-sky-400 truncate">Kopi Aren Senja</div>
+          <div class="text-[10px] text-slate-400">Terjual 31 Cup hari ini</div>
+        </div>
+
+        <div class="bg-slate-900 border border-rose-500/30 bg-rose-500/5 p-4 rounded-2xl space-y-1">
+          <div class="text-[10px] text-rose-400 font-bold uppercase tracking-wider">Peringatan Stok</div>
+          <div class="text-2xl font-black text-rose-400 font-mono">2 Menu</div>
+          <div class="text-[10px] text-rose-300">Croissant (sisa 3), Matcha (sisa 2)</div>
+        </div>
+
+      </div>
+
+      <!-- Quick Stock & Availability Control Table -->
+      <div class="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-3">
+        <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+          <div>
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider">Manajemen Stok &amp; Saklar Menu Habis</h3>
+            <p class="text-[11px] text-slate-400">Kasir/Admin bisa mematikan menu seketika jika bahan mendadak habis di dapur.</p>
+          </div>
+          <span class="text-xs text-slate-400">Pembaruan otomatis ke browser customer</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs">
+            <thead class="text-slate-400 uppercase bg-slate-950 border-b border-slate-800">
+              <tr>
+                <th class="p-3">Nama Produk</th>
+                <th class="p-3">Kategori</th>
+                <th class="p-3">Harga</th>
+                <th class="p-3">Sisa Stok</th>
+                <th class="p-3">Status Penjualan</th>
+                <th class="p-3 text-right">Aksi</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-800/80 text-slate-200">
+              
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-bold text-white flex items-center gap-2">
+                  <div class="w-7 h-7 rounded bg-amber-500/20 text-amber-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-mug-saucer"></i>
+                  </div>
+                  Kopi Aren Senja
+                </td>
+                <td class="p-3 text-slate-400">Kopi Signature</td>
+                <td class="p-3 font-mono font-bold text-white">22.000</td>
+                <td class="p-3 font-mono text-emerald-400 font-bold">45 porsi</td>
+                <td class="p-3">
+                  <span class="bg-emerald-500/20 text-emerald-400 font-bold px-2 py-0.5 rounded text-[10px]">Tersedia</span>
+                </td>
+                <td class="p-3 text-right space-x-1">
+                  <button class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-semibold text-[11px]">Edit</button>
+                  <button class="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded font-semibold text-[11px]">Tandai Habis</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-slate-850">
+                <td class="p-3 font-bold text-white flex items-center gap-2">
+                  <div class="w-7 h-7 rounded bg-slate-800 text-slate-400 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-bread-slice"></i>
+                  </div>
+                  Butter Croissant
+                </td>
+                <td class="p-3 text-slate-400">Pastry</td>
+                <td class="p-3 font-mono font-bold text-white">28.000</td>
+                <td class="p-3 font-mono text-rose-400 font-bold">3 porsi (Kritis)</td>
+                <td class="p-3">
+                  <span class="bg-amber-500/20 text-amber-400 font-bold px-2 py-0.5 rounded text-[10px]">Menipis</span>
+                </td>
+                <td class="p-3 text-right space-x-1">
+                  <button class="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded font-semibold text-[11px]">Edit</button>
+                  <button class="px-2.5 py-1 bg-rose-500/20 hover:bg-rose-500/30 text-rose-400 rounded font-semibold text-[11px]">Tandai Habis</button>
+                </td>
+              </tr>
+
+              <tr class="hover:bg-slate-850 opacity-60">
+                <td class="p-3 font-bold text-slate-400 flex items-center gap-2">
+                  <div class="w-7 h-7 rounded bg-slate-800 text-slate-500 flex items-center justify-center text-xs">
+                    <i class="fa-solid fa-bowl-rice"></i>
+                  </div>
+                  Nasi Sei Sapi
+                </td>
+                <td class="p-3 text-slate-500">Makanan Berat</td>
+                <td class="p-3 font-mono text-slate-400">39.000</td>
+                <td class="p-3 font-mono text-slate-500">0 porsi</td>
+                <td class="p-3">
+                  <span class="bg-rose-500/20 text-rose-400 font-bold px-2 py-0.5 rounded text-[10px]">Sold Out</span>
+                </td>
+                <td class="p-3 text-right space-x-1">
+                  <button class="px-2.5 py-1 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded font-semibold text-[11px]">Aktifkan Kembali</button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Interactive Demo Script -->
+  <script>
+    function showRole(role) {
+      document.getElementById('role-cashier').classList.add('hidden');
+      document.getElementById('role-customer').classList.add('hidden');
+      document.getElementById('role-admin').classList.add('hidden');
+
+      const btns = ['btn-customer', 'btn-cashier', 'btn-admin'];
+      btns.forEach(b => {
+        document.getElementById(b).className = "px-3.5 py-1.5 rounded-lg font-semibold transition-all text-slate-400 hover:text-white";
+      });
+
+      document.getElementById('role-' + role).classList.remove('hidden');
+      const active = document.getElementById('btn-' + role);
+      active.className = "px-3.5 py-1.5 rounded-lg font-semibold transition-all bg-emerald-500 text-slate-950 shadow-md";
+    }
+
+    function toggleCashierMode(mode) {
+      const hybrid = document.getElementById('cashier-hybrid-container');
+      const stream = document.getElementById('cashier-stream-container');
+      const btnHybrid = document.getElementById('cmode-hybrid');
+      const btnStream = document.getElementById('cmode-stream');
+
+      if (mode === 'hybrid') {
+        hybrid.classList.remove('hidden');
+        stream.classList.add('hidden');
+        btnHybrid.className = "px-3 py-1.5 rounded-lg font-bold bg-slate-800 text-white";
+        btnStream.className = "px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white";
+      } else {
+        hybrid.classList.add('hidden');
+        stream.classList.remove('hidden');
+        btnStream.className = "px-3 py-1.5 rounded-lg font-bold bg-slate-800 text-white";
+        btnHybrid.className = "px-3 py-1.5 rounded-lg font-medium text-slate-400 hover:text-white";
+      }
+    }
+
+    function selectSpecificTable(tableNum) {
+      // Switch to cashier hybrid if in another view
+      showRole('cashier');
+      toggleCashierMode('hybrid');
+    }
+
+    function openNoteModal(itemName) {
+      alert("Modal Catatan Terbuka: Pelanggan dapat memasukkan preferensi rasa (contoh: Less Sugar, Es Dipisah, dll) untuk menu: " + itemName);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,215 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Skema Database PostgreSQL Multi-Tenant Kafe POS",
+    "subtitle": "Relasi Tabel & Transaksi Stok Atomik Dine-in",
+    "output": ".archify/architecture-database-schema-20261106-080442/database-schema.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    {
+      "id": "tenants",
+      "type": "database",
+      "label": "tenants",
+      "sublabel": "Root tenant (id, name, slug, tax_rate)",
+      "pos": [40, 240],
+      "size": [190, 76],
+      "tag": "Tenant Root",
+      "icon": "database"
+    },
+    {
+      "id": "users",
+      "type": "security",
+      "label": "users",
+      "sublabel": "Staf kafe (id, role, password_hash)",
+      "pos": [320, 90],
+      "size": [190, 76],
+      "tag": "RBAC JWT",
+      "icon": "security"
+    },
+    {
+      "id": "shifts",
+      "type": "database",
+      "label": "cashier_shifts",
+      "sublabel": "Audit shift (modal vs fisik tunai)",
+      "pos": [630, 90],
+      "size": [190, 76],
+      "tag": "Audit Laci",
+      "icon": "database"
+    },
+    {
+      "id": "tables",
+      "type": "database",
+      "label": "tables",
+      "sublabel": "Meja (table_number, qr_secret)",
+      "pos": [320, 240],
+      "size": [190, 76],
+      "tag": "Signed QR",
+      "icon": "database"
+    },
+    {
+      "id": "categories",
+      "type": "database",
+      "label": "categories",
+      "sublabel": "Kategori (name, sort_order)",
+      "pos": [320, 390],
+      "size": [190, 76],
+      "tag": "Menu Meta",
+      "icon": "database"
+    },
+    {
+      "id": "products",
+      "type": "database",
+      "label": "products",
+      "sublabel": "Produk & stok (price, is_available)",
+      "pos": [630, 390],
+      "size": [200, 76],
+      "tag": "Atomik Stok",
+      "icon": "database"
+    },
+    {
+      "id": "orders",
+      "type": "database",
+      "label": "orders",
+      "sublabel": "Bon transaksi meja (subtotal, status)",
+      "pos": [630, 240],
+      "size": [200, 76],
+      "tag": "Bon Aktif",
+      "icon": "database"
+    },
+    {
+      "id": "order_items",
+      "type": "database",
+      "label": "order_items",
+      "sublabel": "Rincian menu (qty, price_snapshot)",
+      "pos": [960, 240],
+      "size": [200, 76],
+      "tag": "Item History",
+      "icon": "database"
+    },
+    {
+      "id": "payments",
+      "type": "database",
+      "label": "payments",
+      "sublabel": "Pelunasan bon (method, idempotency)",
+      "pos": [960, 90],
+      "size": [200, 76],
+      "tag": "Idempotent",
+      "icon": "database"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "PostgreSQL Multi-Tenant Schema (Row-Level tenant_id Filter)",
+      "wraps": ["tenants", "users", "shifts", "tables", "categories", "products", "orders", "order_items", "payments"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Audit Kasir & Pembayaran Lunas",
+      "wraps": ["shifts", "orders", "payments"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "tenant-users",
+      "from": "tenants",
+      "to": "users",
+      "label": "akun staf",
+      "fromSide": "top",
+      "toSide": "left"
+    },
+    {
+      "id": "tenant-tables",
+      "from": "tenants",
+      "to": "tables",
+      "label": "daftar meja",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "tenant-categories",
+      "from": "tenants",
+      "to": "categories",
+      "label": "daftar kategori",
+      "fromSide": "bottom",
+      "toSide": "left"
+    },
+    {
+      "id": "user-shifts",
+      "from": "users",
+      "to": "shifts",
+      "label": "shift kasir",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "category-products",
+      "from": "categories",
+      "to": "products",
+      "label": "katalog menu",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "table-orders",
+      "from": "tables",
+      "to": "orders",
+      "label": "bon meja",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "order-items-rel",
+      "from": "orders",
+      "to": "order_items",
+      "label": "baris pesanan",
+      "fromSide": "right",
+      "toSide": "left"
+    },
+    {
+      "id": "product-to-order-items",
+      "from": "products",
+      "to": "order_items",
+      "label": "snapshot menu",
+      "fromSide": "right",
+      "toSide": "bottom"
+    },
+    {
+      "id": "order-payment-rel",
+      "from": "orders",
+      "to": "payments",
+      "label": "pelunasan",
+      "fromSide": "top",
+      "toSide": "bottom"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Isolasi Multi-Tenant",
+      "items": [
+        "Kolom tenant_id wajib ada di setiap tabel",
+        "Setiap kueri memfilter tenant_id dari JWT token untuk mencegah kebocoran data antar kafe"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Integritas Transaksi & Stok",
+      "items": [
+        "Stok terpotong otomatis saat order dibuat via UPDATE WHERE stock >= qty",
+        "Batal order (Void) menjalankan kueri rollback stok otomatis",
+        "Tabel order_items menyimpan price_snapshot agar histori omzet kebal inflasi"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Keamanan & Finansial Kasir",
+      "items": [
+        "Kolom idempotency_key pada tabel payments mencegah transaksi ganda akibat klik berulang kasir",
+        "Tabel cashier_shifts merekonsiliasi modal awal laci vs fisik tunai penutupan shift"
+      ]
+    }
+  ]
+}
