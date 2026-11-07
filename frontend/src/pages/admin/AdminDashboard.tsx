@@ -23,6 +23,8 @@ export default function AdminDashboard() {
     completed_orders: number
     cash_total: number
     qris_total: number
+    top_products: Array<{ name: string; qty_sold: number; revenue: number }>
+    weekly_sales: Array<{ date: string; total: number; orders_count: number }>
   } | null>(null)
   const [newTableNumber, setNewTableNumber] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -273,6 +275,73 @@ export default function AdminDashboard() {
                 Rp {(metrics?.qris_total ?? 0).toLocaleString('id-ID')}
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Top 5 Produk Terlaris & Chart Tren Penjualan */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+          {/* Chart Tren Penjualan 7 Hari Terakhir */}
+          <div className="bg-white border border-stone-200 rounded-lg p-3.5 shadow-sm">
+            <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
+              Tren Penjualan 7 Hari Terakhir
+            </h3>
+            {(!metrics?.weekly_sales || metrics.weekly_sales.length === 0) ? (
+              <p className="text-xs text-stone-400 py-6 text-center">Belum ada transaksi completed minggu ini.</p>
+            ) : (
+              <div className="space-y-2">
+                {(() => {
+                  const maxVal = Math.max(...metrics.weekly_sales.map((w) => w.total), 1)
+                  return metrics.weekly_sales.map((item) => {
+                    const pct = Math.round((item.total / maxVal) * 100)
+                    return (
+                      <div key={item.date} className="space-y-1">
+                        <div className="flex justify-between text-[11px]">
+                          <span className="font-mono text-stone-600">{item.date} ({item.orders_count} bon)</span>
+                          <span className="font-mono-num font-bold text-stone-900">
+                            Rp {item.total.toLocaleString('id-ID')}
+                          </span>
+                        </div>
+                        <div className="w-full bg-stone-100 h-2.5 rounded-full overflow-hidden">
+                          <div
+                            className="bg-amber-600 h-full rounded-full transition-all duration-300"
+                            style={{ width: `${Math.max(pct, 4)}%` }}
+                          />
+                        </div>
+                      </div>
+                    )
+                  })
+                })()}
+              </div>
+            )}
+          </div>
+
+          {/* Top 5 Produk Paling Sering Dipesan */}
+          <div className="bg-white border border-stone-200 rounded-lg p-3.5 shadow-sm">
+            <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
+              Menu Paling Sering Dipesan
+            </h3>
+            {(!metrics?.top_products || metrics.top_products.length === 0) ? (
+              <p className="text-xs text-stone-400 py-6 text-center">Belum ada data pesanan selesai.</p>
+            ) : (
+              <div className="divide-y divide-stone-100">
+                {metrics.top_products.map((p, idx) => (
+                  <div key={p.name} className="py-1.5 flex justify-between items-center text-xs">
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 h-4 rounded-full bg-stone-100 text-[10px] font-bold text-stone-600 flex items-center justify-center">
+                        {idx + 1}
+                      </span>
+                      <span className="font-semibold text-stone-900">{p.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-mono-num font-bold text-emerald-700">{p.qty_sold} terjual</span>
+                      <span className="text-[10px] text-stone-400 block font-mono-num">
+                        Rp {p.revenue.toLocaleString('id-ID')}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

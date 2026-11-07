@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func
+from sqlalchemy import select, func, desc
+from app.models.order_item import OrderItem
 
 from app.core.database import get_db
 from app.deps.auth import get_current_user, enforce_tenant_id
@@ -47,6 +48,44 @@ async def get_daily_metrics(
     pay_res = await db.execute(payment_stmt)
     pay_splits = dict(pay_res.all())
 
+    # Top 5 produk paling sering dipesan
+    top_stmt = (
+        select(
+            OrderItem.product_name_snapshot,
+            func.coalesce(func.sum(OrderItem.quantity), 0).label("qty_sold"),
+            func.coalesce(func.sum(OrderItem.subtotal), 0).label("revenue"),
+        )
+        .join(Order, OrderItem.order_id == Order.id)
+        .where(Order.tenant_id == tenant_id, Order.status == "COMPLETED")
+        .group_by(OrderItem.product_name_snapshot)
+        .order_by(desc("qty_sold"))
+        .limit(5)
+    )
+    top_res = await db.execute(top_stmt)
+    top_products = [
+        {"name": row[0], "qty_sold": int(row[1]), "revenue": float(row[2])}
+        for row in top_res.all()
+    ]
+
+    # Chart penjualan 7 hari terakhir
+    # Chart penjualan 7 hari terakhir (func.date() kompatibel di PostgreSQL dan SQLite)
+    daily_sales_stmt = (
+        select(
+            func.date(Order.created_at).label("sale_date"),
+            func.coalesce(func.sum(Order.grand_total), 0).label("total"),
+            func.count(Order.id).label("orders_count"),
+        )
+        .where(Order.tenant_id == tenant_id, Order.status == "COMPLETED")
+        .group_by(func.date(Order.created_at))
+        .order_by(desc("sale_date"))
+        .limit(7)
+    )
+    daily_res = await db.execute(daily_sales_stmt)
+    weekly_sales = [
+        {"date": str(row[0]), "total": float(row[1]), "orders_count": int(row[2])}
+        for row in reversed(daily_res.all())
+    ]
+
     return Response(
         success=True,
         data={
@@ -54,6 +93,8 @@ async def get_daily_metrics(
             "completed_orders": int(total_orders),
             "cash_total": float(pay_splits.get("CASH", 0)),
             "qris_total": float(pay_splits.get("STATIC_QRIS", 0)),
+            "top_products": top_products,
+            "weekly_sales": weekly_sales,
         },
     )
 

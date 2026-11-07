@@ -218,6 +218,8 @@ export const api = {
         completed_orders: number
         cash_total: number
         qris_total: number
+        top_products: Array<{ name: string; qty_sold: number; revenue: number }>
+        weekly_sales: Array<{ date: string; total: number; orders_count: number }>
       }>('/api/v1/reports/daily', { headers: authHeaders(token) }),
     downloadCsv: async () => {
       const res = await fetch(`${API_BASE}/api/v1/reports/export-csv`, {
