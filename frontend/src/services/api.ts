@@ -202,6 +202,28 @@ export const api = {
           body: JSON.stringify({ cancellation_reason: reason }),
         },
       ),
+    getDailyMetrics: () =>
+      request<{
+        total_sales: number
+        completed_orders: number
+        cash_total: number
+        qris_total: number
+      }>('/api/v1/reports/daily', { headers: authHeaders(token) }),
+    downloadCsv: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/reports/export-csv`, {
+        headers: authHeaders(token),
+      })
+      if (!res.ok) throw new Error('Gagal mengunduh berkas CSV.')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `laporan_penjualan_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    },
   }),
 
   // SSE stream URL builder (EventSource handles reconnect automatically)

@@ -172,8 +172,20 @@ export default function AdminDashboard() {
           <h1 className="text-sm font-bold">Portal Admin - {auth.user.username}</h1>
           <p className="text-[10px] text-stone-400">Kelola menu, stok, dan saklar ketersediaan</p>
         </div>
-        <nav aria-label="Portal" className="flex gap-1 text-xs">
-          <button onClick={() => navigate('/cashier')} className="px-2 py-1 rounded bg-stone-800 hover:bg-stone-700 touch-target">
+        <nav aria-label="Portal" className="flex items-center gap-1.5 text-xs">
+          <button
+            onClick={() => void api.withAuth(auth.token).downloadCsv().catch((e: Error) => setError(e.message))}
+            className="px-2.5 py-1.5 rounded bg-amber-700 hover:bg-amber-800 text-white font-bold touch-target"
+          >
+            Unduh CSV
+          </button>
+          <button
+            onClick={() => navigate('/print-qr')}
+            className="px-2.5 py-1.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-200 font-semibold touch-target"
+          >
+            Cetak QR Meja
+          </button>
+          <button onClick={() => navigate('/cashier')} className="px-2.5 py-1.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-200 touch-target">
             Kasir
           </button>
           <button
@@ -181,7 +193,7 @@ export default function AdminDashboard() {
               authStorage.clear()
               setAuth(null)
             }}
-            className="px-2 py-1 rounded bg-stone-800 hover:bg-stone-700 touch-target"
+            className="px-2 py-1.5 rounded bg-stone-800 hover:bg-stone-700 text-stone-300 touch-target"
           >
             Keluar
           </button>

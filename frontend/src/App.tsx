@@ -2,6 +2,7 @@ import { Route, Routes } from 'react-router-dom'
 import CustomerMenu from './pages/customer/CustomerMenu'
 import CashierDashboard from './pages/cashier/CashierDashboard'
 import AdminDashboard from './pages/admin/AdminDashboard'
+import PrintQrPage from './pages/admin/PrintQrPage'
 
 export default function App() {
   return (
@@ -12,6 +13,8 @@ export default function App() {
       <Route path="/cashier" element={<CashierDashboard />} />
       {/* Admin/Owner: metrik & kelola menu */}
       <Route path="/admin" element={<AdminDashboard />} />
+      {/* Cetak Stiker QR Meja A4 siap potong */}
+      <Route path="/print-qr" element={<PrintQrPage />} />
     </Routes>
   )
 }
