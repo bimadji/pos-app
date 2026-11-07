@@ -3,11 +3,11 @@ import csv
 import io
 import uuid
 from typing import Annotated
-from datetime import datetime, timezone
-from fastapi import APIRouter, Depends, Query
+from datetime import date, datetime, timezone
+from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, func, desc
+from sqlalchemy import select, func, desc, cast, String
 from app.models.order_item import OrderItem
 
 from app.core.database import get_db
@@ -18,6 +18,16 @@ from app.models.user import User
 from app.schemas.catalog import Response
 
 router = APIRouter()
+
+
+def _parse_date_param(value: str, name: str) -> date:
+    try:
+        return date.fromisoformat(value)
+    except ValueError:
+        raise HTTPException(
+            status_code=422,
+            detail={"code": "INVALID_DATE", "message": f"{name} harus berformat YYYY-MM-DD."},
+        )
 
 
 @router.get("/daily", response_model=Response)
@@ -31,9 +41,9 @@ async def get_daily_metrics(
     """Retrieve sales metrics with optional custom date filter and monthly breakdown."""
     conditions = [Order.tenant_id == tenant_id, Order.status == "COMPLETED"]
     if start_date:
-        conditions.append(func.date(Order.created_at) >= start_date)
+        conditions.append(func.date(Order.created_at) >= _parse_date_param(start_date, "start_date"))
     if end_date:
-        conditions.append(func.date(Order.created_at) <= end_date)
+        conditions.append(func.date(Order.created_at) <= _parse_date_param(end_date, "end_date"))
 
     sales_stmt = select(
         func.coalesce(func.sum(Order.grand_total), 0),
@@ -90,8 +100,8 @@ async def get_daily_metrics(
         for row in reversed(daily_res.all())
     ]
     # Breakdown penjualan bulanan (12 bulan terakhir)
-    # func.substr(func.date(), 1, 7) menghasilkan format 'YYYY-MM' kompatibel di PG & SQLite
-    month_expr = func.substr(func.date(Order.created_at), 1, 7)
+    # CAST ke string lalu substr 1..7 menghasilkan 'YYYY-MM' di PostgreSQL dan SQLite
+    month_expr = func.substr(cast(Order.created_at, String), 1, 7)
     monthly_stmt = (
         select(
             month_expr.label("month_str"),

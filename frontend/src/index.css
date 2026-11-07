@@ -27,14 +27,19 @@ select:focus-visible {
 }
 
 @media print {
-  /* Sembunyikan seluruh halaman, kecuali modal struk (induk modal diberi .printing-receipt) */
-  body.printing-receipt *:not(.printing-receipt):not(.printing-receipt *) {
-    display: none !important;
+  /* Sembunyikan root aplikasi; modal struk (dan anaknya) dikembalikan visible */
+  body.printing-receipt #root {
+    visibility: hidden !important;
   }
   body.printing-receipt .receipt-backdrop {
-    position: static !important;
+    visibility: visible !important;
+    position: absolute !important;
+    inset: 0 !important;
     background: white !important;
     padding: 0 !important;
+  }
+  body.printing-receipt .receipt-backdrop * {
+    visibility: visible !important;
   }
   body { background: white !important; color: black !important; }
   .receipt-print-area {

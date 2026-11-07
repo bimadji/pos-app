@@ -12,6 +12,7 @@ export interface CategoryItem {
 export interface MenuCategory {
   category_id: string
   category_name: string
+  item_type: 'DRINK' | 'FOOD' | 'SNACK'
   items: CategoryItem[]
 }
 
@@ -109,7 +110,7 @@ export const api = {
     request<MenuCategory[]>(`/api/v1/menu?table_id=${tableId}&token=${token}`),
   getTableSession: (tableId: string, token: string) =>
     request<{ table_id: string; table_number: number }>(
-      `/api/v1/menu/session?table_id=${tableId}&token=${token}`,
+      `/api/v1/session?table_id=${tableId}&token=${token}`,
     ),
   submitOrder: (
     tableId: string,
@@ -249,9 +250,12 @@ export const api = {
   }),
 
   // SSE stream URL builder (EventSource handles reconnect automatically)
-  sseUrl: (params: { tableId?: string; token?: string }) => {
+  sseUrl: (params: { tableId?: string; token?: string; staffToken?: string }) => {
     if (params.tableId && params.token) {
       return `${API_BASE}/api/v1/orders/stream?table_id=${params.tableId}&token=${params.token}`
+    }
+    if (params.staffToken) {
+      return `${API_BASE}/api/v1/orders/stream?staff_token=${params.staffToken}`
     }
     return `${API_BASE}/api/v1/orders/stream`
   },

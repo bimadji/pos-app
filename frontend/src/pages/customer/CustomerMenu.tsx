@@ -6,6 +6,21 @@ import { useCart } from '../../hooks/useCart'
 import { useSSE } from '../../hooks/useSSE'
 
 type Phase = 'menu' | 'tracking'
+type ItemType = 'DRINK' | 'FOOD' | 'SNACK'
+
+const NOTE_CHIP_GROUPS: Record<ItemType, { label: string; chips: string[] }[]> = {
+  DRINK: [
+    { label: 'Level Es', chips: ['Normal Ice', 'Less Ice', 'No Ice', 'Extra Ice'] },
+    { label: 'Level Gula', chips: ['Normal Sugar', 'Less Sugar (50%)', 'No Sugar'] },
+  ],
+  FOOD: [
+    { label: 'Level Pedas', chips: ['Tidak Pedas', 'Pedas Sedang', 'Extra Pedas'] },
+    { label: 'Tambahan', chips: ['Tanpa Bawang', 'Pisah Saus', 'Tanpa Sayur'] },
+  ],
+  SNACK: [
+    { label: 'Penyajian', chips: ['Pisah Saus', 'Tanpa Saus', 'Hangat Sekali'] },
+  ],
+}
 
 const STATUS_STEPS = ['PENDING', 'COOKING', 'SERVED', 'COMPLETED'] as const
 const STATUS_LABEL: Record<string, string> = {
@@ -30,7 +45,7 @@ export default function CustomerMenu() {
   const [order, setOrder] = useState<Order | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [noteTarget, setNoteTarget] = useState<{ item: MenuCategory['items'][0] } | null>(null)
+  const [noteTarget, setNoteTarget] = useState<{ item: MenuCategory['items'][0]; itemType: ItemType } | null>(null)
   const [noteText, setNoteText] = useState('')
 
   const cart = useCart(tableId)
@@ -88,6 +103,9 @@ export default function CustomerMenu() {
     const cat = menu.find((c) => c.category_id === activeCategory)
     return cat ? cat.items : []
   }, [menu, activeCategory])
+  const [cartOpen, setCartOpen] = useState(false)
+  const activeItemType: ItemType =
+    (menu.find((c) => c.category_id === activeCategory)?.item_type as ItemType | undefined) ?? 'FOOD'
 
   const submitOrder = async () => {
     setError(null)
@@ -219,10 +237,11 @@ export default function CustomerMenu() {
     <div className="min-h-screen bg-stone-100 pb-28">
       <header className="bg-stone-900 text-white px-4 py-3 flex justify-between items-center">
         <div>
-          <p className="text-[11px] bg-amber-700 inline-block px-2 py-0.5 rounded font-black tracking-wider">
-            {tableNumber ? `MEJA ${tableNumber}` : 'MEJA TERVERIFIKASI'}
+          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Meja Anda</p>
+          <p className="text-3xl font-black font-mono-num leading-none">
+            {tableNumber ?? '-'}
           </p>
-          <h1 className="text-sm font-bold mt-1">Kafe Senja Kopi</h1>
+          <h1 className="text-xs font-semibold text-stone-300 mt-1">Kafe Senja Kopi</h1>
         </div>
         <span className="text-[10px] text-emerald-400 flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" aria-hidden="true"></span>
@@ -277,7 +296,7 @@ export default function CustomerMenu() {
             </div>
             <button
               onClick={() => {
-                setNoteTarget({ item })
+                setNoteTarget({ item, itemType: activeItemType })
                 setNoteText('')
               }}
               className="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target"
@@ -288,13 +307,18 @@ export default function CustomerMenu() {
         ))}
       </div>
 
-      {/* Sticky cart bar */}
+      {/* Sticky cart bar: buka keranjang untuk ubah atau hapus item */}
       {cart.totalItems > 0 && (
         <div className="fixed bottom-3 left-3 right-3 bg-white border border-stone-200 shadow-xl rounded-lg p-3 flex justify-between items-center z-20">
-          <div>
-            <p className="text-[10px] text-stone-500 font-bold">{cart.totalItems} ITEM TERPILIH</p>
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="text-left touch-target"
+            aria-label="Buka keranjang"
+          >
+            <p className="text-[10px] text-stone-500 font-bold">{cart.totalItems} ITEM TERPILIH (LIHAT)</p>
             <p className="text-sm font-black font-mono-num text-amber-900">Rp {cart.subtotal.toLocaleString('id-ID')}</p>
-          </div>
+          </button>
           <button
             onClick={() => {
               if (!customerName.trim()) {
@@ -311,6 +335,57 @@ export default function CustomerMenu() {
         </div>
       )}
 
+      {/* Bottom sheet keranjang: ubah qty dan hapus item sebelum dikirim */}
+      {cartOpen && (
+        <div className="fixed inset-0 bg-stone-900/50 flex items-end justify-center z-40" role="dialog" aria-modal="true" aria-label="Keranjang">
+          <div className="bg-white rounded-t-lg w-full max-w-md max-h-[80vh] overflow-y-auto p-4 shadow-xl">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-bold text-stone-900">Keranjang Anda</h3>
+              <button onClick={() => setCartOpen(false)} className="text-xs font-bold text-stone-600 touch-target px-2" aria-label="Tutup keranjang">Tutup</button>
+            </div>
+            {cart.lines.length === 0 && <p className="text-xs text-stone-500 py-6 text-center">Keranjang kosong.</p>}
+            <div className="divide-y divide-stone-100">
+              {cart.lines.map((line, idx) => (
+                <div key={`${line.product_id}-${idx}`} className="py-2.5 flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-stone-900">{line.name}</p>
+                    {line.notes && <p className="text-[11px] italic text-stone-500">&quot;{line.notes}&quot;</p>}
+                    <p className="text-xs font-mono-num text-amber-800 mt-0.5">Rp {(line.price * line.quantity).toLocaleString('id-ID')}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(idx, line.quantity - 1)}
+                      className="w-9 h-9 rounded bg-stone-100 border border-stone-300 font-bold touch-target"
+                      aria-label={`Kurangi ${line.name}`}
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-sm font-bold font-mono-num">{line.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(idx, line.quantity + 1)}
+                      className="w-9 h-9 rounded bg-stone-100 border border-stone-300 font-bold touch-target"
+                      aria-label={`Tambah ${line.name}`}
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cart.removeLine(idx)}
+                      className="ml-1 px-2 h-9 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold touch-target"
+                      aria-label={`Hapus ${line.name}`}
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Item notes modal */}
       {/* Item notes modal with chips & custom input */}
       {noteTarget && (
@@ -319,39 +394,25 @@ export default function CustomerMenu() {
             <h3 className="text-sm font-bold text-stone-900">Catatan Khusus: {noteTarget.item.name}</h3>
             <p className="text-[11px] text-stone-500 mt-0.5">Pilih opsi cepat atau ketik sendiri di bawah:</p>
 
-            {/* Preset chips */}
+            {/* Preset sesuai jenis menu kategori item */}
             <div className="mt-3 space-y-2">
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Level Es</p>
-              <div className="flex flex-wrap gap-1.5">
-                {['Normal Ice', 'Less Ice', 'No Ice', 'Extra Ice'].map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => {
-                      setNoteText((prev) => (prev ? `${prev}, ${chip}` : chip))
-                    }}
-                    className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 text-stone-800 rounded border border-stone-200 font-medium"
-                  >
-                    + {chip}
-                  </button>
-                ))}
-              </div>
-
-              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider pt-1">Level Gula / Rasa</p>
-              <div className="flex flex-wrap gap-1.5">
-                {['Normal Sugar', 'Less Sugar (50%)', 'No Sugar', 'Pisah Gula', 'Pedas Sedang', 'Tidak Pedas'].map((chip) => (
-                  <button
-                    key={chip}
-                    type="button"
-                    onClick={() => {
-                      setNoteText((prev) => (prev ? `${prev}, ${chip}` : chip))
-                    }}
-                    className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 text-stone-800 rounded border border-stone-200 font-medium"
-                  >
-                    + {chip}
-                  </button>
-                ))}
-              </div>
+              {NOTE_CHIP_GROUPS[noteTarget.itemType].map((group) => (
+                <div key={group.label} className="space-y-1.5">
+                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider pt-1">{group.label}</p>
+                  <div className="flex flex-wrap gap-1.5">
+                    {group.chips.map((chip) => (
+                      <button
+                        key={chip}
+                        type="button"
+                        onClick={() => setNoteText((prev) => (prev ? `${prev}, ${chip}` : chip))}
+                        className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 text-stone-800 rounded border border-stone-200 font-medium"
+                      >
+                        + {chip}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ))}
             </div>
 
             {/* Custom note text */}

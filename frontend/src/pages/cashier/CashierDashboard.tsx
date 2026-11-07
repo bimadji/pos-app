@@ -21,7 +21,7 @@ function usePrintReceiptMode(active: boolean) {
 
 export default function CashierDashboard() {
   const navigate = useNavigate()
-  const auth = authStorage.load()
+  const [auth] = useState(() => authStorage.load())
   const [tables, setTables] = useState<TableInfo[]>([])
   const [orders, setOrders] = useState<Order[]>([])
   const [selectedOrderId, setSelectedOrderId] = useState<string | null>(null)
@@ -65,8 +65,9 @@ export default function CashierDashboard() {
     }
   }, [auth])
 
-  useSSE(auth ? api.sseUrl({}) : null, (ev) => {
-    // Any order/table event: simply re-pull active state (small data, 1 cafe)
+  useSSE(auth ? api.sseUrl({ staffToken: auth.token }) : null, (ev) => {
+    // Abaikan event connected atau ping agar tidak merefresh kueri secara berulang-ulang
+    if (ev.event === 'connected' || ev.event === 'ping') return
     if (ev.event.startsWith('order.') || ev.event.startsWith('table.')) {
       void refreshOrders()
     }
