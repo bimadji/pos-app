@@ -122,6 +122,18 @@ async def process_payment(
         await db.commit()
         await db.refresh(payment)
 
+        from app.services.sse_service import broadcaster
+        broadcaster.broadcast(
+            tenant_id=tenant_id,
+            event="order.completed",
+            data={
+                "order_id": str(order.id),
+                "table_number": order.table_number_snapshot,
+                "grand_total": float(order.grand_total),
+                "payment_method": payment.payment_method,
+            },
+        )
+
         return Response(
             success=True,
             data=PaymentResponse(

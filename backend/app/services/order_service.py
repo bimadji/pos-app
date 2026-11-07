@@ -114,4 +114,20 @@ async def create_or_append_order(
 
     await db.commit()
     await db.refresh(order)
+
+    # 4. Broadcast realtime ke kasir & pelanggan
+    from app.services.sse_service import broadcaster
+    event_name = "order.created" if is_new_order else "order.round_added"
+    broadcaster.broadcast(
+        tenant_id=table.tenant_id,
+        event=event_name,
+        data={
+            "order_id": str(order.id),
+            "table_number": order.table_number_snapshot,
+            "customer_name": order.customer_name,
+            "status": order.status,
+            "round_number": current_round,
+            "grand_total": float(order.grand_total),
+        },
+    )
     return order
