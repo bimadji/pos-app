@@ -62,6 +62,7 @@ async def get_public_menu(
         {
             "category_id": str(c.id),
             "category_name": c.name,
+            "item_type": c.item_type,
             "items": by_category.get(c.id, []),
         }
         for c in categories
