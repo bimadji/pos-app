@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import get_db
 from app.deps.table_token import get_table_session
-from app.deps.auth import get_current_token_payload
+from app.deps.auth import get_optional_token_payload
 from app.models.table import Table
 from app.services.sse_service import broadcaster
 
@@ -37,7 +37,7 @@ async def order_stream(
     db: Annotated[AsyncSession, Depends(get_db)],
     table_id: Annotated[uuid.UUID | None, Query()] = None,
     token: Annotated[str | None, Query()] = None,
-    payload: dict | None = Depends(get_current_token_payload),
+    payload: dict | None = Depends(get_optional_token_payload),
 ):
     """Realtime order events.
 

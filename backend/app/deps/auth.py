@@ -11,7 +11,24 @@ from app.core.database import get_db
 from app.core.security import decode_access_token
 from app.models.user import User
 
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+
 http_bearer = HTTPBearer(auto_error=False)
+http_bearer_optional = HTTPBearer(auto_error=False)
+
+
+async def get_optional_token_payload(
+    credentials: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(http_bearer_optional)
+    ],
+) -> Dict[str, Any] | None:
+    """Optional variant: returns None when no Authorization header is present."""
+    if credentials is None or not credentials.credentials:
+        return None
+    try:
+        return decode_access_token(credentials.credentials)
+    except jwt.PyJWTError:
+        return None
 
 
 async def get_current_token_payload(

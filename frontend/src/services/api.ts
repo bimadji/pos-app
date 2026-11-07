@@ -1,0 +1,204 @@
+const API_BASE = (import.meta.env.VITE_API_BASE as string) || 'http://localhost:8000'
+
+export interface CategoryItem {
+  id: string
+  name: string
+  description: string | null
+  price: number
+  stock: number
+  image_url: string | null
+}
+
+export interface MenuCategory {
+  category_id: string
+  category_name: string
+  items: CategoryItem[]
+}
+
+export interface OrderItem {
+  id: string
+  product_id: string
+  product_name_snapshot: string
+  price_snapshot: number
+  quantity: number
+  subtotal: number
+  notes: string | null
+  round_number: number
+  item_status: string
+}
+
+export interface Order {
+  id: string
+  table_number_snapshot: number
+  customer_name: string
+  status: string
+  subtotal: number
+  service_amount: number
+  tax_amount: number
+  grand_total: number
+  cancellation_reason: string | null
+  created_at: string
+  items: OrderItem[]
+}
+
+export interface TableInfo {
+  id: string
+  table_number: number
+  status: string
+  qr_token: string
+}
+
+export interface StaffAuth {
+  token: string
+  user: { username: string; role: string }
+}
+
+export interface Category {
+  id: string
+  name: string
+  sort_order: number
+}
+
+export interface Product {
+  id: string
+  category_id: string
+  name: string
+  description: string | null
+  price: number
+  stock: number
+  image_url: string | null
+  is_available: boolean
+}
+
+interface ApiErrorDetail {
+  code?: string
+  message?: string
+}
+
+interface ApiBody {
+  detail?: string | ApiErrorDetail
+  error?: ApiErrorDetail
+  data?: unknown
+}
+
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
+  const res = await fetch(`${API_BASE}${path}`, {
+    headers: { 'Content-Type': 'application/json', ...options.headers },
+    ...options,
+  })
+  const body: ApiBody = await res.json().catch(() => ({}))
+  if (!res.ok) {
+    const detail = body.detail ?? body.error ?? {}
+    const message =
+      typeof detail === 'string' ? detail : detail.message || `HTTP ${res.status}`
+    throw Object.assign(new Error(message), {
+      status: res.status,
+      code: typeof detail === 'string' ? undefined : detail.code,
+    })
+  }
+  return body.data as T
+}
+
+function authHeaders(token: string): Record<string, string> {
+  return { Authorization: `Bearer ${token}` }
+}
+
+export const api = {
+  // --- Customer ---
+  getPublicMenu: (tableId: string, token: string) =>
+    request<MenuCategory[]>(`/api/v1/menu?table_id=${tableId}&token=${token}`),
+  submitOrder: (
+    tableId: string,
+    token: string,
+    payload: {
+      customer_name: string
+      items: { product_id: string; quantity: number; notes?: string }[]
+    },
+  ) =>
+    request<Order>(`/api/v1/orders?table_id=${tableId}&token=${token}`, {
+      method: 'POST',
+      body: JSON.stringify(payload),
+    }),
+
+  // --- Staff (Bearer JWT) ---
+  login: (tenantSlug: string, username: string, password: string) =>
+    request<StaffAuth>('/api/v1/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ tenant_slug: tenantSlug, username, password }),
+    }),
+  withAuth: (token: string) => ({
+    listTables: () => request<TableInfo[]>('/api/v1/tables', { headers: authHeaders(token) }),
+    listActiveOrders: () =>
+      request<Order[]>('/api/v1/orders/active', { headers: authHeaders(token) }),
+    listProducts: () => request<Product[]>('/api/v1/products', { headers: authHeaders(token) }),
+    listCategories: () =>
+      request<Category[]>('/api/v1/categories', { headers: authHeaders(token) }),
+    toggleProduct: (productId: string) =>
+      request<{ product_id: string; name: string; is_available: boolean }>(
+        `/api/v1/products/${productId}/toggle`,
+        { method: 'PATCH', headers: authHeaders(token) },
+      ),
+    createProduct: (payload: {
+      category_id: string
+      name: string
+      price: number
+      stock: number
+      description?: string
+    }) =>
+      request<Product>('/api/v1/products', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify(payload),
+      }),
+    updateOrderStatus: (orderId: string, newStatus: string) =>
+      request<{ order_id: string; status: string }>(
+        `/api/v1/orders/${orderId}/status?new_status=${newStatus}`,
+        { method: 'PATCH', headers: authHeaders(token) },
+      ),
+    payOrder: (orderId: string, payload: { payment_method: string; amount_tendered: number }) =>
+      request<{
+        payment_id: string
+        order_id: string
+        status: string
+        grand_total: number
+        amount_tendered: number
+        change_due: number
+        payment_method: string
+        paid_at: string
+      }>(`/api/v1/orders/${orderId}/pay`, {
+        method: 'POST',
+        headers: { ...authHeaders(token), 'Idempotency-Key': crypto.randomUUID() },
+        body: JSON.stringify(payload),
+      }),
+    cancelOrder: (orderId: string, reason: string) =>
+      request<{ order_id: string; status: string; message: string }>(
+        `/api/v1/orders/${orderId}/cancel`,
+        {
+          method: 'POST',
+          headers: authHeaders(token),
+          body: JSON.stringify({ cancellation_reason: reason }),
+        },
+      ),
+  }),
+
+  // SSE stream URL builder (EventSource handles reconnect automatically)
+  sseUrl: (params: { tableId?: string; token?: string }) => {
+    if (params.tableId && params.token) {
+      return `${API_BASE}/api/v1/orders/stream?table_id=${params.tableId}&token=${params.token}`
+    }
+    return `${API_BASE}/api/v1/orders/stream`
+  },
+}
+
+export const authStorage = {
+  save: (auth: StaffAuth) => localStorage.setItem('pos_staff', JSON.stringify(auth)),
+  load: (): StaffAuth | null => {
+    try {
+      const raw = localStorage.getItem('pos_staff')
+      return raw ? (JSON.parse(raw) as StaffAuth) : null
+    } catch {
+      return null
+    }
+  },
+  clear: () => localStorage.removeItem('pos_staff'),
+}
