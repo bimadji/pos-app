@@ -1,0 +1,236 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Arsitektur Kode Fase 2: Katalog Menu, Meja & Signed QR Token",
+    "subtitle": "Alur autentikasi tanpa login pelanggan dan manajemen katalog kasir",
+    "output": ".archify/architecture-phase2-catalog-20261106-204716/phase2-architecture.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "frontend": { "label": "Lapisan Endpoint & Routing" },
+        "backend": { "label": "Dependensi & Token Helper" },
+        "database": { "label": "Model ORM & PostgreSQL" },
+        "security": { "label": "Keamanan & HMAC" },
+        "external": { "label": "Aktor (Customer, Kasir)" }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "customer",
+      "type": "external",
+      "label": "Pelanggan di Meja",
+      "sublabel": "Scan QR /t/:id?token=hmac",
+      "pos": [30, 200],
+      "size": [160, 70],
+      "icon": "person"
+    },
+    {
+      "id": "staff",
+      "type": "external",
+      "label": "Kasir & Admin",
+      "sublabel": "Kelola menu & cetak QR meja",
+      "pos": [30, 360],
+      "size": [160, 70],
+      "icon": "person"
+    },
+    {
+      "id": "api_router",
+      "type": "frontend",
+      "label": "api/v1/router.py",
+      "sublabel": "Agregator: /menu, /tables, /products",
+      "pos": [280, 280],
+      "size": [170, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "menu_endpoint",
+      "type": "frontend",
+      "label": "endpoints/menu.py",
+      "sublabel": "GET /menu (sembunyikan sold out)",
+      "pos": [540, 200],
+      "size": [180, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "table_endpoint",
+      "type": "frontend",
+      "label": "endpoints/tables.py",
+      "sublabel": "GET/POST /tables (QR token generator)",
+      "pos": [540, 340],
+      "size": [180, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "catalog_endpoints",
+      "type": "frontend",
+      "label": "endpoints/products.py",
+      "sublabel": "CRUD produk/kategori & /toggle switch",
+      "pos": [540, 480],
+      "size": [180, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "table_token_dep",
+      "type": "security",
+      "label": "deps/table_token.py",
+      "sublabel": "get_table_session (Validasi QR meja)",
+      "pos": [800, 200],
+      "size": [210, 70],
+      "icon": "security",
+      "tag": "Zero Login"
+    },
+    {
+      "id": "token_core",
+      "type": "security",
+      "label": "core/tokens.py",
+      "sublabel": "HMAC-SHA256 compare_digest",
+      "pos": [800, 340],
+      "size": [210, 70],
+      "icon": "security"
+    },
+    {
+      "id": "models_catalog",
+      "type": "database",
+      "label": "models/ (catalog)",
+      "sublabel": "Table, Category, Product (Decimal)",
+      "pos": [800, 480],
+      "size": [210, 70],
+      "icon": "database"
+    },
+    {
+      "id": "db_postgres",
+      "type": "database",
+      "label": "PostgreSQL (pos_cafe_db)",
+      "sublabel": "12 meja, 3 kategori, 9 produk",
+      "pos": [540, 640],
+      "size": [180, 70],
+      "icon": "database"
+    },
+    {
+      "id": "seed_alembic",
+      "type": "database",
+      "label": "Alembic & Seed Data",
+      "sublabel": "Migrasi 002 & scripts/seed_data.py",
+      "pos": [280, 640],
+      "size": [170, 70],
+      "icon": "database"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "backend/app (Modul Katalog & Token)",
+      "wraps": ["api_router", "menu_endpoint", "table_endpoint", "catalog_endpoints", "table_token_dep", "token_core", "models_catalog"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "cust-to-router",
+      "from": "customer",
+      "to": "api_router",
+      "label": "QR URL",
+      "variant": "emphasis"
+    },
+    {
+      "id": "staff-to-router",
+      "from": "staff",
+      "to": "api_router",
+      "label": "JWT",
+      "variant": "security"
+    },
+    {
+      "id": "router-to-menu",
+      "from": "api_router",
+      "to": "menu_endpoint",
+      "label": "/menu"
+    },
+    {
+      "id": "router-to-tables",
+      "from": "api_router",
+      "to": "table_endpoint",
+      "label": "/tables"
+    },
+    {
+      "id": "router-to-catalog",
+      "from": "api_router",
+      "to": "catalog_endpoints",
+      "label": "/products"
+    },
+    {
+      "id": "menu-to-dep",
+      "from": "menu_endpoint",
+      "to": "table_token_dep",
+      "label": "cek token",
+      "variant": "security"
+    },
+    {
+      "id": "dep-to-tokens",
+      "from": "table_token_dep",
+      "to": "token_core",
+      "label": "verify HMAC",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "table-to-tokens",
+      "from": "table_endpoint",
+      "to": "token_core",
+      "label": "sign HMAC",
+      "variant": "security"
+    },
+    {
+      "id": "catalog-to-models",
+      "from": "catalog_endpoints",
+      "to": "models_catalog",
+      "label": "ORM",
+      "variant": "dashed"
+    },
+    {
+      "id": "models-to-db",
+      "from": "models_catalog",
+      "to": "db_postgres",
+      "label": "asyncpg",
+      "variant": "emphasis"
+    },
+    {
+      "id": "seed-to-db",
+      "from": "seed_alembic",
+      "to": "db_postgres",
+      "label": "migrate & seed",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "Sesi Meja Tanpa Login (Zero Friction)",
+      "items": [
+        "Pelanggan scan QR meja membawa URL /t/:id?token=hmac",
+        "Token ditandatangani HMAC-SHA256 dengan secret unik per meja",
+        "Token palsu ditolak HTTP 401 INVALID_TABLE_TOKEN"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Katalog Publik Bersih",
+      "items": [
+        "Menu otomatis terfilter tenant_id milik meja yang discan",
+        "Produk yang ditandai sold-out disembunyikan otomatis",
+        "Harga di model menggunakan Decimal untuk presisi finansial"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Kontrol Cepat Kasir",
+      "items": [
+        "Saklar cepat PATCH /products/{id}/toggle untuk mematikan menu seketika",
+        "Hapus kategori dilindungi FK RESTRICT agar tidak merusak produk aktif",
+        "Endpoint tables menghasilkan token QR siap cetak kapan saja"
+      ]
+    }
+  ]
+}
