@@ -107,6 +107,10 @@ export const api = {
   // --- Customer ---
   getPublicMenu: (tableId: string, token: string) =>
     request<MenuCategory[]>(`/api/v1/menu?table_id=${tableId}&token=${token}`),
+  getTableSession: (tableId: string, token: string) =>
+    request<{ table_id: string; table_number: number }>(
+      `/api/v1/menu/session?table_id=${tableId}&token=${token}`,
+    ),
   submitOrder: (
     tableId: string,
     token: string,
@@ -212,15 +216,21 @@ export const api = {
           body: JSON.stringify({ cancellation_reason: reason }),
         },
       ),
-    getDailyMetrics: () =>
-      request<{
+    getDailyMetrics: (params?: { start_date?: string; end_date?: string }) => {
+      const q = new URLSearchParams()
+      if (params?.start_date) q.set('start_date', params.start_date)
+      if (params?.end_date) q.set('end_date', params.end_date)
+      const qs = q.toString() ? `?${q.toString()}` : ''
+      return request<{
         total_sales: number
         completed_orders: number
         cash_total: number
         qris_total: number
         top_products: Array<{ name: string; qty_sold: number; revenue: number }>
         weekly_sales: Array<{ date: string; total: number; orders_count: number }>
-      }>('/api/v1/reports/daily', { headers: authHeaders(token) }),
+        monthly_sales: Array<{ month: string; total: number; orders_count: number }>
+      }>(`/api/v1/reports/daily${qs}`, { headers: authHeaders(token) })
+    },
     downloadCsv: async () => {
       const res = await fetch(`${API_BASE}/api/v1/reports/export-csv`, {
         headers: authHeaders(token),

@@ -25,19 +25,23 @@ export default function AdminDashboard() {
     qris_total: number
     top_products: Array<{ name: string; qty_sold: number; revenue: number }>
     weekly_sales: Array<{ date: string; total: number; orders_count: number }>
+    monthly_sales: Array<{ month: string; total: number; orders_count: number }>
   } | null>(null)
+  const [filterPreset, setFilterPreset] = useState<'all' | 'today' | '7days' | '30days' | 'custom'>('all')
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
   const [newTableNumber, setNewTableNumber] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ name: '', price: '', stock: '', category_id: '' })
 
-  const loadCatalog = useCallback(async (authData: StaffAuth) => {
+  const loadCatalog = useCallback(async (authData: StaffAuth, filterParams?: { start_date?: string; end_date?: string }) => {
     const client = api.withAuth(authData.token)
     try {
       const [p, c, t, m] = await Promise.all([
         client.listProducts(),
         client.listCategories(),
         client.listTables(),
-        client.getDailyMetrics(),
+        client.getDailyMetrics(filterParams),
       ])
       setProducts(p)
       setCategories(c)
@@ -248,8 +252,98 @@ export default function AdminDashboard() {
 
       <main className="p-4 space-y-4 max-w-5xl mx-auto">
         {/* 1. Kartu Metrik Penjualan Harian (Dashboard Penjualan) */}
+        {/* Filter Rentang Tanggal Penjualan */}
+        <div className="bg-white border border-stone-200 rounded-lg p-3 shadow-sm flex flex-wrap gap-2 items-center justify-between">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <span className="text-xs font-bold text-stone-700 uppercase mr-1">Filter Waktu:</span>
+            {[
+              { id: 'all', label: 'Semua Waktu' },
+              { id: 'today', label: 'Hari Ini' },
+              { id: '7days', label: '7 Hari Terakhir' },
+              { id: '30days', label: '30 Hari Terakhir' },
+              { id: 'custom', label: 'Kustom Tanggal' },
+            ].map((f) => (
+              <button
+                key={f.id}
+                type="button"
+                onClick={() => {
+                  const preset = f.id as typeof filterPreset
+                  setFilterPreset(preset)
+                  if (!auth) return
+                  const todayStr = new Date().toISOString().slice(0, 10)
+                  if (preset === 'all') {
+                    setStartDate('')
+                    setEndDate('')
+                    void loadCatalog(auth)
+                  } else if (preset === 'today') {
+                    setStartDate(todayStr)
+                    setEndDate(todayStr)
+                    void loadCatalog(auth, { start_date: todayStr, end_date: todayStr })
+                  } else if (preset === '7days') {
+                    const d = new Date()
+                    d.setDate(d.getDate() - 7)
+                    const s = d.toISOString().slice(0, 10)
+                    setStartDate(s)
+                    setEndDate(todayStr)
+                    void loadCatalog(auth, { start_date: s, end_date: todayStr })
+                  } else if (preset === '30days') {
+                    const d = new Date()
+                    d.setDate(d.getDate() - 30)
+                    const s = d.toISOString().slice(0, 10)
+                    setStartDate(s)
+                    setEndDate(todayStr)
+                    void loadCatalog(auth, { start_date: s, end_date: todayStr })
+                  }
+                }}
+                className={`px-2.5 py-1 text-xs rounded font-semibold transition-colors ${
+                  filterPreset === f.id
+                    ? 'bg-amber-800 text-white'
+                    : 'bg-stone-100 hover:bg-stone-200 text-stone-700'
+                }`}
+              >
+                {f.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Form Tanggal Kustom */}
+          {filterPreset === 'custom' && (
+            <div className="flex items-center gap-1.5 w-full sm:w-auto pt-2 sm:pt-0 border-t sm:border-t-0 border-stone-100">
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="border border-stone-300 rounded px-2 py-1 text-xs text-stone-800"
+                aria-label="Tanggal mulai"
+              />
+              <span className="text-xs text-stone-400">s/d</span>
+              <input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="border border-stone-300 rounded px-2 py-1 text-xs text-stone-800"
+                aria-label="Tanggal akhir"
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  if (auth && startDate && endDate) {
+                    void loadCatalog(auth, { start_date: startDate, end_date: endDate })
+                  }
+                }}
+                className="px-3 py-1 bg-stone-900 hover:bg-stone-800 text-white text-xs font-bold rounded"
+              >
+                Terapkan
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* 1. Kartu Metrik Penjualan */}
         <div>
-          <h2 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">Ringkasan Penjualan Hari Ini</h2>
+          <h2 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
+            Ringkasan Penjualan {filterPreset === 'all' ? '(Semua Waktu)' : filterPreset === 'today' ? '(Hari Ini)' : filterPreset === '7days' ? '(7 Hari)' : filterPreset === '30days' ? '(30 Hari)' : `(${startDate} s/d ${endDate})`}
+          </h2>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="bg-white border border-stone-200 rounded-lg p-3 shadow-sm">
               <p className="text-[10px] text-stone-500 font-bold uppercase">Total Omzet</p>
@@ -343,6 +437,50 @@ export default function AdminDashboard() {
               </div>
             )}
           </div>
+        </div>
+
+        {/* 3. Breakdown Penjualan Bulanan (Januari - Desember) */}
+        <div className="bg-white border border-stone-200 rounded-lg p-3.5 shadow-sm">
+          <div className="flex justify-between items-center mb-2">
+            <div>
+              <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider">
+                Rekapitulasi Penjualan Bulanan (Tahun Berjalan)
+              </h3>
+              <p className="text-[11px] text-stone-500">Performa omzet kafe dari bulan ke bulan.</p>
+            </div>
+            <span className="text-[10px] bg-stone-100 text-stone-600 px-2 py-0.5 rounded font-mono">12 Bulan</span>
+          </div>
+
+          {(!metrics?.monthly_sales || metrics.monthly_sales.length === 0) ? (
+            <p className="text-xs text-stone-400 py-6 text-center">Belum ada rekap data transaksi bulanan.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-2 pt-2">
+              {metrics.monthly_sales.map((m) => {
+                const [year, month] = m.month.split('-')
+                const monthNames = [
+                  'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+                  'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember',
+                ]
+                const label = `${monthNames[Number(month) - 1] || m.month} ${year}`
+                return (
+                  <div
+                    key={m.month}
+                    className="border border-stone-200 rounded-lg p-2.5 bg-stone-50 flex flex-col justify-between"
+                  >
+                    <div>
+                      <p className="text-[10px] font-bold text-stone-500 uppercase">{label}</p>
+                      <p className="text-sm font-black font-mono-num text-amber-900 mt-0.5">
+                        Rp {m.total.toLocaleString('id-ID')}
+                      </p>
+                    </div>
+                    <p className="text-[10px] text-stone-500 mt-2 font-mono">
+                      {m.orders_count} Transaksi
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
         </div>
 
         {/* 2. Kartu Status Inventaris */}

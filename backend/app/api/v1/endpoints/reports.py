@@ -4,7 +4,7 @@ import io
 import uuid
 from typing import Annotated
 from datetime import datetime, timezone
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 from fastapi.responses import StreamingResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, func, desc
@@ -25,16 +25,20 @@ async def get_daily_metrics(
     tenant_id: Annotated[uuid.UUID, Depends(enforce_tenant_id)],
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[User, Depends(get_current_user)],
+    start_date: Annotated[str | None, Query()] = None,
+    end_date: Annotated[str | None, Query()] = None,
 ):
-    """Retrieve high-level daily sales metrics for owner portal."""
-    # Total omzet completed orders
+    """Retrieve sales metrics with optional custom date filter and monthly breakdown."""
+    conditions = [Order.tenant_id == tenant_id, Order.status == "COMPLETED"]
+    if start_date:
+        conditions.append(func.date(Order.created_at) >= start_date)
+    if end_date:
+        conditions.append(func.date(Order.created_at) <= end_date)
+
     sales_stmt = select(
         func.coalesce(func.sum(Order.grand_total), 0),
         func.count(Order.id),
-    ).where(
-        Order.tenant_id == tenant_id,
-        Order.status == "COMPLETED",
-    )
+    ).where(*conditions)
     res = await db.execute(sales_stmt)
     total_sales, total_orders = res.fetchone() or (0, 0)
 
@@ -56,7 +60,7 @@ async def get_daily_metrics(
             func.coalesce(func.sum(OrderItem.subtotal), 0).label("revenue"),
         )
         .join(Order, OrderItem.order_id == Order.id)
-        .where(Order.tenant_id == tenant_id, Order.status == "COMPLETED")
+        .where(*conditions)
         .group_by(OrderItem.product_name_snapshot)
         .order_by(desc("qty_sold"))
         .limit(5)
@@ -75,7 +79,7 @@ async def get_daily_metrics(
             func.coalesce(func.sum(Order.grand_total), 0).label("total"),
             func.count(Order.id).label("orders_count"),
         )
-        .where(Order.tenant_id == tenant_id, Order.status == "COMPLETED")
+        .where(*conditions)
         .group_by(func.date(Order.created_at))
         .order_by(desc("sale_date"))
         .limit(7)
@@ -84,6 +88,25 @@ async def get_daily_metrics(
     weekly_sales = [
         {"date": str(row[0]), "total": float(row[1]), "orders_count": int(row[2])}
         for row in reversed(daily_res.all())
+    ]
+    # Breakdown penjualan bulanan (12 bulan terakhir)
+    # func.substr(func.date(), 1, 7) menghasilkan format 'YYYY-MM' kompatibel di PG & SQLite
+    month_expr = func.substr(func.date(Order.created_at), 1, 7)
+    monthly_stmt = (
+        select(
+            month_expr.label("month_str"),
+            func.coalesce(func.sum(Order.grand_total), 0).label("total"),
+            func.count(Order.id).label("orders_count"),
+        )
+        .where(Order.tenant_id == tenant_id, Order.status == "COMPLETED")
+        .group_by(month_expr)
+        .order_by(desc("month_str"))
+        .limit(12)
+    )
+    monthly_res = await db.execute(monthly_stmt)
+    monthly_sales = [
+        {"month": str(row[0]), "total": float(row[1]), "orders_count": int(row[2])}
+        for row in reversed(monthly_res.all())
     ]
 
     return Response(
@@ -95,6 +118,7 @@ async def get_daily_metrics(
             "qris_total": float(pay_splits.get("STATIC_QRIS", 0)),
             "top_products": top_products,
             "weekly_sales": weekly_sales,
+            "monthly_sales": monthly_sales,
         },
     )
 

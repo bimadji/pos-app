@@ -67,3 +67,16 @@ async def get_public_menu(
         for c in categories
     ]
     return Response(data=data)
+
+
+@router.get("/session", response_model=Response)
+async def get_customer_session(
+    table: Annotated[Table, Depends(get_table_session)],
+):
+    """Public endpoint to get current validated table number for customer header."""
+    return Response(
+        data={
+            "table_id": str(table.id),
+            "table_number": table.table_number,
+        }
+    )

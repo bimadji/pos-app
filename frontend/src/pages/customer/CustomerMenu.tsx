@@ -22,6 +22,7 @@ export default function CustomerMenu() {
 
   const [menu, setMenu] = useState<MenuCategory[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [tableNumber, setTableNumber] = useState<number | null>(null)
   const [customerName, setCustomerName] = useState(
     () => localStorage.getItem(`pos_customer_name_${tableId}`) ?? '',
   )
@@ -36,12 +37,15 @@ export default function CustomerMenu() {
 
   useEffect(() => {
     let cancelled = false
-    api
-      .getPublicMenu(tableId, token)
-      .then((data) => {
+    Promise.all([
+      api.getPublicMenu(tableId, token),
+      api.getTableSession(tableId, token).catch(() => null),
+    ])
+      .then(([data, sess]) => {
         if (cancelled) return
         setMenu(data)
         setActiveCategory(data[0]?.category_id ?? null)
+        if (sess) setTableNumber(sess.table_number)
       })
       .catch((e: Error) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false))
@@ -215,8 +219,8 @@ export default function CustomerMenu() {
     <div className="min-h-screen bg-stone-100 pb-28">
       <header className="bg-stone-900 text-white px-4 py-3 flex justify-between items-center">
         <div>
-          <p className="text-[10px] bg-amber-700 inline-block px-2 py-0.5 rounded font-bold">
-            MEJA SAH
+          <p className="text-[11px] bg-amber-700 inline-block px-2 py-0.5 rounded font-black tracking-wider">
+            {tableNumber ? `MEJA ${tableNumber}` : 'MEJA TERVERIFIKASI'}
           </p>
           <h1 className="text-sm font-bold mt-1">Kafe Senja Kopi</h1>
         </div>
@@ -241,6 +245,22 @@ export default function CustomerMenu() {
           </button>
         ))}
       </nav>
+      {/* Input Nama Pemesan Permanen di Atas Menu */}
+      <div className="mx-3 mt-3 bg-white border border-stone-200 rounded-lg p-3 shadow-sm">
+        <div className="flex items-center justify-between mb-1">
+          <label htmlFor="cust-name" className="text-[11px] font-bold text-stone-700 uppercase">
+            Nama Pemesan <span className="text-rose-600">*</span>
+          </label>
+          <span className="text-[10px] text-stone-400">Untuk panggilan antrean</span>
+        </div>
+        <input
+          id="cust-name"
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="Ketik nama Anda (misal: Bima)"
+          className="w-full border border-stone-300 rounded px-3 py-2 text-sm font-semibold text-stone-900 touch-target focus:border-amber-700 focus:outline-none"
+        />
+      </div>
 
       <div className="p-3 space-y-3">
         {visibleItems.length === 0 && (
@@ -270,49 +290,72 @@ export default function CustomerMenu() {
 
       {/* Sticky cart bar */}
       {cart.totalItems > 0 && (
-        <div className="fixed bottom-3 left-3 right-3 bg-white border-t border-stone-200 shadow-lg rounded-lg p-3 flex justify-between items-center">
+        <div className="fixed bottom-3 left-3 right-3 bg-white border border-stone-200 shadow-xl rounded-lg p-3 flex justify-between items-center z-20">
           <div>
-            <p className="text-[10px] text-stone-500 font-bold">{cart.totalItems} PESANAN</p>
-            <p className="text-sm font-bold font-mono-num">Rp {cart.subtotal.toLocaleString('id-ID')}</p>
+            <p className="text-[10px] text-stone-500 font-bold">{cart.totalItems} ITEM TERPILIH</p>
+            <p className="text-sm font-black font-mono-num text-amber-900">Rp {cart.subtotal.toLocaleString('id-ID')}</p>
           </div>
           <button
             onClick={() => {
               if (!customerName.trim()) {
-                setError('Isi nama pemesan dulu ya.')
+                setError('Mohon isi kolom Nama Pemesan di bagian atas sebelum mengirim ke dapur.')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
                 return
               }
               void submitOrder()
             }}
-            className="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target"
+            className="px-5 py-2.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target shadow"
           >
-            Kirim ke Dapur
+            Kirim ke Dapur ({tableNumber ? `Meja ${tableNumber}` : 'Meja Sah'})
           </button>
         </div>
       )}
 
-      {/* Customer name input (first time) */}
-      {cart.totalItems === 0 && (
-        <div className="fixed bottom-3 left-3 right-3 bg-white border border-stone-200 shadow-lg rounded-lg p-3">
-          <label htmlFor="cust-name" className="text-[10px] font-bold text-stone-600 block mb-1">
-            NAMA PEMESAN
-          </label>
-          <input
-            id="cust-name"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Contoh: Rian"
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm touch-target"
-          />
-        </div>
-      )}
-
       {/* Item notes modal */}
+      {/* Item notes modal with chips & custom input */}
       {noteTarget && (
-        <div className="fixed inset-0 bg-stone-900/50 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
-            <h3 className="text-sm font-bold">Catatan untuk {noteTarget.item.name}</h3>
+        <div className="fixed inset-0 bg-stone-900/50 flex items-end sm:items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
+            <h3 className="text-sm font-bold text-stone-900">Catatan Khusus: {noteTarget.item.name}</h3>
+            <p className="text-[11px] text-stone-500 mt-0.5">Pilih opsi cepat atau ketik sendiri di bawah:</p>
+
+            {/* Preset chips */}
+            <div className="mt-3 space-y-2">
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">Level Es</p>
+              <div className="flex flex-wrap gap-1.5">
+                {['Normal Ice', 'Less Ice', 'No Ice', 'Extra Ice'].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => {
+                      setNoteText((prev) => (prev ? `${prev}, ${chip}` : chip))
+                    }}
+                    className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 text-stone-800 rounded border border-stone-200 font-medium"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
+
+              <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider pt-1">Level Gula / Rasa</p>
+              <div className="flex flex-wrap gap-1.5">
+                {['Normal Sugar', 'Less Sugar (50%)', 'No Sugar', 'Pisah Gula', 'Pedas Sedang', 'Tidak Pedas'].map((chip) => (
+                  <button
+                    key={chip}
+                    type="button"
+                    onClick={() => {
+                      setNoteText((prev) => (prev ? `${prev}, ${chip}` : chip))
+                    }}
+                    className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 text-stone-800 rounded border border-stone-200 font-medium"
+                  >
+                    + {chip}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Custom note text */}
             <input
-              autoFocus
               value={noteText}
               onChange={(e) => setNoteText(e.target.value)}
               onKeyDown={(e) => {
@@ -322,13 +365,13 @@ export default function CustomerMenu() {
                   setNoteTarget(null)
                 }
               }}
-              placeholder="Contoh: less ice, gula aren sedikit"
+              placeholder="Catatan manual (misal: bungkus terpisah)"
               className="w-full border border-stone-300 rounded px-3 py-2 text-sm mt-3 touch-target"
             />
             <div className="flex gap-2 mt-3">
               <button
                 onClick={() => setNoteTarget(null)}
-                className="flex-1 py-2.5 bg-stone-100 border border-stone-300 rounded text-sm font-semibold touch-target"
+                className="flex-1 py-2 bg-stone-100 border border-stone-300 rounded text-xs font-semibold text-stone-700 touch-target"
               >
                 Batal
               </button>
@@ -337,7 +380,7 @@ export default function CustomerMenu() {
                   cart.addItem(noteTarget.item, noteText)
                   setNoteTarget(null)
                 }}
-                className="flex-1 py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded text-sm font-bold touch-target"
+                className="flex-1 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded text-xs font-bold touch-target shadow"
               >
                 Tambah ke Keranjang
               </button>
