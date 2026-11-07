@@ -10,6 +10,15 @@ const STATUS_LABEL: Record<string, string> = {
   SERVED: 'Tersaji',
 }
 
+/** Selama modal struk terbuka, body diberi penanda untuk CSS @media print */
+function usePrintReceiptMode(active: boolean) {
+  useEffect(() => {
+    if (active) document.body.classList.add('printing-receipt')
+    else document.body.classList.remove('printing-receipt')
+    return () => document.body.classList.remove('printing-receipt')
+  }, [active])
+}
+
 export default function CashierDashboard() {
   const navigate = useNavigate()
   const auth = authStorage.load()
@@ -20,6 +29,14 @@ export default function CashierDashboard() {
   const [error, setError] = useState<string | null>(null)
   const [payAmount, setPayAmount] = useState('')
   const [lastReceipt, setLastReceipt] = useState<Order | null>(null)
+  const [paymentInfo, setPaymentInfo] = useState<{
+    method: string
+    amount_tendered: number
+    change_due: number
+    paid_at: string
+  } | null>(null)
+
+  usePrintReceiptMode(lastReceipt !== null && paymentInfo !== null)
 
   useEffect(() => {
     if (!auth) {
@@ -262,9 +279,15 @@ export default function CashierDashboard() {
                             amount_tendered: amount,
                           })
                           setLastReceipt(selected)
+                          setPaymentInfo({
+                            method: receipt.payment_method,
+                            amount_tendered: receipt.amount_tendered,
+                            change_due: receipt.change_due,
+                            paid_at: receipt.paid_at,
+                          })
                           setPayAmount('')
-                          window.print()
-                          void receipt
+                          // Tunggu React render preview struk dulu, baru buka dialog cetak
+                          setTimeout(() => window.print(), 120)
                         })
                       }
                       className="py-2.5 bg-stone-100 border border-stone-300 rounded font-bold text-xs touch-target"
@@ -274,12 +297,18 @@ export default function CashierDashboard() {
                     <button
                       onClick={() =>
                         void act(async () => {
-                          await api.withAuth(auth.token).payOrder(selected.id, {
+                          const receipt = await api.withAuth(auth.token).payOrder(selected.id, {
                             payment_method: 'STATIC_QRIS',
                             amount_tendered: selected.grand_total,
                           })
                           setLastReceipt(selected)
-                          window.print()
+                          setPaymentInfo({
+                            method: receipt.payment_method,
+                            amount_tendered: receipt.amount_tendered,
+                            change_due: receipt.change_due,
+                            paid_at: receipt.paid_at,
+                          })
+                          setTimeout(() => window.print(), 120)
                         })
                       }
                       className="py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded font-bold text-xs touch-target"
@@ -294,20 +323,82 @@ export default function CashierDashboard() {
         </section>
       </main>
 
-      {/* Hidden receipt for window.print() */}
-      {lastReceipt && (
-        <div className="receipt-print-area hidden">
-          <p className="text-center font-bold">KAFE SENJA KOPI</p>
-          <p>--------------------------------</p>
-          <p>Meja {lastReceipt.table_number_snapshot} - {lastReceipt.customer_name}</p>
-          {lastReceipt.items.map((i) => (
-            <p key={i.id}>
-              {i.quantity}x {i.product_name_snapshot} {i.subtotal.toLocaleString('id-ID')}
-            </p>
-          ))}
-          <p>--------------------------------</p>
-          <p>Total: Rp {lastReceipt.grand_total.toLocaleString('id-ID')}</p>
-          <p className="text-center">Terima kasih atas kunjungan Anda</p>
+      {/* Receipt preview modal: terlihat di layar, satu-satunya yang tercetak */}
+      {lastReceipt && paymentInfo && (
+        <div
+          className="receipt-backdrop fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Preview struk pembayaran"
+        >
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs max-h-[90vh] overflow-y-auto">
+            <div className="receipt-print-area p-4 text-[11px] font-mono-num text-stone-900">
+              <p className="text-center font-bold text-sm">KAFE SENJA KOPI</p>
+              <p className="text-center text-[10px] text-stone-500">Jl. Contoh No. 123, Kota</p>
+              <p className="text-center">--------------------------------</p>
+              <p>Meja      : {lastReceipt.table_number_snapshot}</p>
+              <p>Pelanggan : {lastReceipt.customer_name}</p>
+              <p>Waktu     : {new Date(paymentInfo.paid_at).toLocaleString('id-ID')}</p>
+              <p>--------------------------------</p>
+              {lastReceipt.items.map((i) => (
+                <div key={i.id}>
+                  <p>
+                    {i.quantity}x {i.product_name_snapshot}
+                  </p>
+                  {i.notes && <p className="italic text-stone-500">   &quot;{i.notes}&quot;</p>}
+                  <p className="text-right">{i.subtotal.toLocaleString('id-ID')}</p>
+                </div>
+              ))}
+              <p>--------------------------------</p>
+              <div className="flex justify-between">
+                <span>Subtotal</span>
+                <span>{lastReceipt.subtotal.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Service</span>
+                <span>{lastReceipt.service_amount.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Pajak PB1</span>
+                <span>{lastReceipt.tax_amount.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between font-bold border-t border-dashed border-stone-400 mt-1 pt-1">
+                <span>TOTAL</span>
+                <span>Rp {lastReceipt.grand_total.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Metode</span>
+                <span>{paymentInfo.method}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Bayar</span>
+                <span>{paymentInfo.amount_tendered.toLocaleString('id-ID')}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Kembali</span>
+                <span>{paymentInfo.change_due.toLocaleString('id-ID')}</span>
+              </div>
+              <p className="text-center border-2 border-stone-800 font-bold mt-2 py-0.5">LUNAS</p>
+              <p className="text-center text-[10px] mt-2">Terima kasih atas kunjungan Anda</p>
+            </div>
+            <div className="flex gap-2 p-3 border-t border-stone-200 no-print">
+              <button
+                onClick={() => {
+                  setLastReceipt(null)
+                  setPaymentInfo(null)
+                }}
+                className="flex-1 py-2.5 bg-stone-100 border border-stone-300 rounded text-sm font-semibold touch-target"
+              >
+                Tutup
+              </button>
+              <button
+                onClick={() => window.print()}
+                className="flex-1 py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded text-sm font-bold touch-target"
+              >
+                Cetak Struk
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

@@ -17,6 +17,8 @@ export default function AdminDashboard() {
   const [newPrice, setNewPrice] = useState('')
   const [newStock, setNewStock] = useState('')
   const [newCategoryId, setNewCategoryId] = useState('')
+  const [editingId, setEditingId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState({ name: '', price: '', stock: '', category_id: '' })
 
   const loadCatalog = useCallback(async (authData: StaffAuth) => {
     const client = api.withAuth(authData.token)
@@ -55,6 +57,46 @@ export default function AdminDashboard() {
       await api.withAuth(auth.token).toggleProduct(productId)
       await loadCatalog(auth)
     } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const startEdit = (p: Product) => {
+    setEditingId(p.id)
+    setEditForm({
+      name: p.name,
+      price: String(p.price),
+      stock: String(p.stock),
+      category_id: p.category_id,
+    })
+  }
+
+  const saveEdit = async (productId: string) => {
+    if (!auth) return
+    setError(null)
+    try {
+      await api.withAuth(auth.token).updateProduct(productId, {
+        name: editForm.name,
+        price: Number(editForm.price),
+        stock: Number(editForm.stock),
+        category_id: editForm.category_id,
+      })
+      setEditingId(null)
+      await loadCatalog(auth)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const removeProduct = async (productId: string, name: string) => {
+    if (!auth) return
+    if (!window.confirm(`Hapus menu "${name}"? Menu yang pernah dipesan tidak dapat dihapus.`)) return
+    setError(null)
+    try {
+      await api.withAuth(auth.token).deleteProduct(productId)
+      await loadCatalog(auth)
+    } catch (e) {
+      // 409: produk ada di riwayat pesanan
       setError((e as Error).message)
     }
   }
@@ -235,30 +277,103 @@ export default function AdminDashboard() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-stone-100">
-                {products.map((p) => (
-                  <tr key={p.id}>
-                    <td className="py-2 px-2 font-semibold text-stone-900">{p.name}</td>
-                    <td className="py-2 px-2 font-mono-num">Rp {p.price.toLocaleString('id-ID')}</td>
-                    <td className={`py-2 px-2 font-mono-num ${p.stock <= 5 ? 'text-amber-700 font-bold' : ''}`}>
-                      {p.stock}
-                    </td>
-                    <td className="py-2 px-2">
-                      {p.is_available ? (
-                        <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">Aktif</span>
-                      ) : (
-                        <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-semibold">Habis</span>
-                      )}
-                    </td>
-                    <td className="py-2 px-2 text-right">
-                      <button
-                        onClick={() => void toggleProduct(p.id)}
-                        className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded font-semibold touch-target"
-                      >
-                        {p.is_available ? 'Tandai Habis' : 'Aktifkan'}
-                      </button>
-                    </td>
-                  </tr>
-                ))}
+                {products.map((p) =>
+                  editingId === p.id ? (
+                    <tr key={p.id} className="bg-amber-50">
+                      <td className="py-2 px-2">
+                        <input
+                          value={editForm.name}
+                          onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                          className="w-full border border-stone-300 rounded px-2 py-1 text-xs"
+                          aria-label="Nama menu"
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          value={editForm.price}
+                          onChange={(e) => setEditForm({ ...editForm, price: e.target.value })}
+                          type="number"
+                          inputMode="numeric"
+                          className="w-24 border border-stone-300 rounded px-2 py-1 text-xs font-mono-num"
+                          aria-label="Harga"
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <input
+                          value={editForm.stock}
+                          onChange={(e) => setEditForm({ ...editForm, stock: e.target.value })}
+                          type="number"
+                          inputMode="numeric"
+                          className="w-16 border border-stone-300 rounded px-2 py-1 text-xs font-mono-num"
+                          aria-label="Stok"
+                        />
+                      </td>
+                      <td className="py-2 px-2">
+                        <select
+                          value={editForm.category_id}
+                          onChange={(e) => setEditForm({ ...editForm, category_id: e.target.value })}
+                          className="border border-stone-300 rounded px-1 py-1 text-xs"
+                          aria-label="Kategori"
+                        >
+                          {categories.map((c) => (
+                            <option key={c.id} value={c.id}>
+                              {c.name}
+                            </option>
+                          ))}
+                        </select>
+                      </td>
+                      <td className="py-2 px-2 text-right space-x-1">
+                        <button
+                          onClick={() => void saveEdit(p.id)}
+                          className="px-2.5 py-1 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold touch-target"
+                        >
+                          Simpan
+                        </button>
+                        <button
+                          onClick={() => setEditingId(null)}
+                          className="px-2.5 py-1 bg-stone-100 border border-stone-300 rounded font-semibold touch-target"
+                        >
+                          Batal
+                        </button>
+                      </td>
+                    </tr>
+                  ) : (
+                    <tr key={p.id}>
+                      <td className="py-2 px-2 font-semibold text-stone-900">{p.name}</td>
+                      <td className="py-2 px-2 font-mono-num">Rp {p.price.toLocaleString('id-ID')}</td>
+                      <td className={`py-2 px-2 font-mono-num ${p.stock <= 5 ? 'text-amber-700 font-bold' : ''}`}>
+                        {p.stock}
+                      </td>
+                      <td className="py-2 px-2">
+                        {p.is_available ? (
+                          <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded font-semibold">Aktif</span>
+                        ) : (
+                          <span className="bg-rose-100 text-rose-800 px-2 py-0.5 rounded font-semibold">Habis</span>
+                        )}
+                      </td>
+                      <td className="py-2 px-2 text-right space-x-1">
+                        <button
+                          onClick={() => startEdit(p)}
+                          className="px-2.5 py-1 bg-sky-100 hover:bg-sky-200 border border-sky-300 text-sky-900 rounded font-semibold touch-target"
+                        >
+                          Edit
+                        </button>
+                        <button
+                          onClick={() => void toggleProduct(p.id)}
+                          className="px-2.5 py-1 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded font-semibold touch-target"
+                        >
+                          {p.is_available ? 'Tandai Habis' : 'Aktifkan'}
+                        </button>
+                        <button
+                          onClick={() => void removeProduct(p.id, p.name)}
+                          className="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 border border-rose-300 text-rose-800 rounded font-semibold touch-target"
+                        >
+                          Hapus
+                        </button>
+                      </td>
+                    </tr>
+                  ),
+                )}
               </tbody>
             </table>
           </div>

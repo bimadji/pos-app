@@ -27,7 +27,15 @@ select:focus-visible {
 }
 
 @media print {
-  header, nav, .no-print { display: none !important; }
+  /* Sembunyikan seluruh halaman, kecuali modal struk (induk modal diberi .printing-receipt) */
+  body.printing-receipt *:not(.printing-receipt):not(.printing-receipt *) {
+    display: none !important;
+  }
+  body.printing-receipt .receipt-backdrop {
+    position: static !important;
+    background: white !important;
+    padding: 0 !important;
+  }
   body { background: white !important; color: black !important; }
   .receipt-print-area {
     width: 100% !important;
@@ -36,7 +44,9 @@ select:focus-visible {
     font-size: 11px !important;
     line-height: 1.3 !important;
     margin: 0 auto !important;
+    box-shadow: none !important;
   }
+  .no-print { display: none !important; }
 }
 
 @media (prefers-reduced-motion: reduce) {

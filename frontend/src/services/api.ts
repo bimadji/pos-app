@@ -153,6 +153,26 @@ export const api = {
         headers: authHeaders(token),
         body: JSON.stringify(payload),
       }),
+    updateProduct: (
+      productId: string,
+      payload: {
+        name?: string
+        price?: number
+        stock?: number
+        category_id?: string
+        description?: string
+      },
+    ) =>
+      request<Product>(`/api/v1/products/${productId}`, {
+        method: 'PATCH',
+        headers: authHeaders(token),
+        body: JSON.stringify(payload),
+      }),
+    deleteProduct: (productId: string) =>
+      request<null>(`/api/v1/products/${productId}`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+      }),
     updateOrderStatus: (orderId: string, newStatus: string) =>
       request<{ order_id: string; status: string }>(
         `/api/v1/orders/${orderId}/status?new_status=${newStatus}`,
