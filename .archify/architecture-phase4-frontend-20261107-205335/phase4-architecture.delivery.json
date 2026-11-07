@@ -1,0 +1,17 @@
+{
+  "schemaVersion": 1,
+  "receiptId": "214704c1-bc1e-40dc-8c11-061a23d24cde",
+  "status": "current",
+  "command": "deliver",
+  "type": "architecture",
+  "input": "E:\\Kuliah\\AI Workspace\\posapp\\.archify\\architecture-phase4-frontend-20261107-205335\\candidate.json",
+  "output": "E:\\Kuliah\\AI Workspace\\posapp\\.archify\\architecture-phase4-frontend-20261107-205335\\phase4-architecture.html",
+  "specification": {
+    "sha256": "59df0a39e6fa30e3c7872b1357399633fd0a07357e61fcc7a4259c5bf3c578e5",
+    "bytes": 7087
+  },
+  "artifact": {
+    "sha256": "a498fcb83ae75dfd7040a13d34dbc4a7976a51ca64fdd5d685b22be1e15a3517",
+    "bytes": 774426
+  }
+}

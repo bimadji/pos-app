@@ -1,0 +1,269 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Arsitektur Kode Fase 4: Realtime SSE & Frontend React",
+    "subtitle": "Koneksi 3 portal frontend ke REST API dan Server-Sent Events",
+    "output": ".archify/architecture-phase4-frontend-20261107-205335/phase4-architecture.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "frontend": { "label": "Komponen Frontend React" },
+        "backend": { "label": "FastAPI & SSE Engine" },
+        "database": { "label": "Basis Data & Penyimpanan" },
+        "security": { "label": "Keamanan & Autentikasi" },
+        "external": { "label": "Peranti / Aktor Luar" }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "customer_hp",
+      "type": "external",
+      "label": "Ponsel Pelanggan",
+      "sublabel": "Browser HP (Scan QR Meja)",
+      "pos": [30, 160],
+      "size": [160, 70],
+      "icon": "person"
+    },
+    {
+      "id": "cashier_screen",
+      "type": "external",
+      "label": "Tablet Kasir / Dapur",
+      "sublabel": "Layar operasional meja",
+      "pos": [30, 360],
+      "size": [160, 70],
+      "icon": "person"
+    },
+    {
+      "id": "admin_screen",
+      "type": "external",
+      "label": "Laptop Pemilik",
+      "sublabel": "Browser portal owner",
+      "pos": [30, 560],
+      "size": [160, 70],
+      "icon": "person"
+    },
+    {
+      "id": "page_customer",
+      "type": "frontend",
+      "label": "CustomerMenu.tsx",
+      "sublabel": "Katalog, draft cart, live tracker, e-receipt",
+      "pos": [280, 160],
+      "size": [220, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "page_cashier",
+      "type": "frontend",
+      "label": "CashierDashboard.tsx",
+      "sublabel": "Denah meja grid, billing, cetak struk",
+      "pos": [280, 360],
+      "size": [220, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "page_admin",
+      "type": "frontend",
+      "label": "AdminDashboard.tsx",
+      "sublabel": "Login, metrik, CRUD menu & toggle habis",
+      "pos": [280, 560],
+      "size": [220, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "hook_cart",
+      "type": "database",
+      "label": "useCart.ts",
+      "sublabel": "Sinkron draft ke localStorage HP",
+      "pos": [590, 80],
+      "size": [190, 70],
+      "icon": "database"
+    },
+    {
+      "id": "hook_sse",
+      "type": "backend",
+      "label": "useSSE.ts",
+      "sublabel": "Wrapper EventSource auto-reconnect",
+      "pos": [590, 240],
+      "size": [190, 70],
+      "icon": "backend"
+    },
+    {
+      "id": "api_client",
+      "type": "frontend",
+      "label": "services/api.ts",
+      "sublabel": "Klien fetch bertipe (JWT authHeaders)",
+      "pos": [590, 460],
+      "size": [190, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "sse_backend",
+      "type": "backend",
+      "label": "sse_service.py",
+      "sublabel": "In-memory pub/sub asyncio.Queue",
+      "pos": [870, 240],
+      "size": [200, 70],
+      "icon": "backend",
+      "tag": "Broadcaster"
+    },
+    {
+      "id": "fastapi_routes",
+      "type": "backend",
+      "label": "FastAPI REST API",
+      "sublabel": "auth, orders, products, tables",
+      "pos": [870, 460],
+      "size": [200, 70],
+      "icon": "backend"
+    },
+    {
+      "id": "db_postgres",
+      "type": "database",
+      "label": "PostgreSQL (pos_cafe_db)",
+      "sublabel": "Persistensi transaksional",
+      "pos": [870, 620],
+      "size": [200, 70],
+      "icon": "database"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "frontend/src (Aplikasi React SPA)",
+      "wraps": ["page_customer", "page_cashier", "page_admin", "hook_cart", "hook_sse", "api_client"]
+    },
+    {
+      "kind": "region",
+      "label": "backend/app (FastAPI & Realtime Engine)",
+      "wraps": ["sse_backend", "fastapi_routes"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "cust-to-page",
+      "from": "customer_hp",
+      "to": "page_customer",
+      "label": "buka URL QR",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cashier-to-page",
+      "from": "cashier_screen",
+      "to": "page_cashier",
+      "label": "akses /cashier",
+      "variant": "emphasis"
+    },
+    {
+      "id": "admin-to-page",
+      "from": "admin_screen",
+      "to": "page_admin",
+      "label": "akses /admin",
+      "variant": "emphasis"
+    },
+    {
+      "id": "page-to-cart",
+      "from": "page_customer",
+      "to": "hook_cart",
+      "label": "simpan draft",
+      "variant": "dashed"
+    },
+    {
+      "id": "page-to-sse",
+      "from": "page_customer",
+      "to": "hook_sse",
+      "label": "listen status",
+      "variant": "dashed"
+    },
+    {
+      "id": "cashier-to-sse",
+      "from": "page_cashier",
+      "to": "hook_sse",
+      "label": "listen order baru",
+      "variant": "dashed"
+    },
+    {
+      "id": "pages-to-api",
+      "from": "page_customer",
+      "to": "api_client",
+      "label": "submit",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cashier-to-api",
+      "from": "page_cashier",
+      "to": "api_client",
+      "label": "bayar / status",
+      "variant": "emphasis"
+    },
+    {
+      "id": "admin-to-api",
+      "from": "page_admin",
+      "to": "api_client",
+      "label": "CRUD menu",
+      "variant": "emphasis"
+    },
+    {
+      "id": "hook-to-stream",
+      "from": "hook_sse",
+      "to": "sse_backend",
+      "label": "/orders/stream",
+      "variant": "security"
+    },
+    {
+      "id": "api-to-fastapi",
+      "from": "api_client",
+      "to": "fastapi_routes",
+      "label": "REST HTTP",
+      "variant": "emphasis"
+    },
+    {
+      "id": "fastapi-to-sse",
+      "from": "fastapi_routes",
+      "to": "sse_backend",
+      "label": "broadcast",
+      "variant": "security",
+      "fromSide": "top",
+      "toSide": "bottom"
+    },
+    {
+      "id": "fastapi-to-db",
+      "from": "fastapi_routes",
+      "to": "db_postgres",
+      "label": "kueri DB",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "3 Portal Web Mandiri",
+      "items": [
+        "Customer (/t/:tableId): katalog, draft cart tahan reload, live status, e-receipt",
+        "Kasir (/cashier): denah 12 meja berkode warna, panel billing, cetak struk",
+        "Admin (/admin): metrik omzet, tambah/edit/hapus produk, toggle menu habis"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Realtime SSE (Server-Sent Events)",
+      "items": [
+        "Backend broadcaster in-memory dengan asyncio.Queue per subscriber",
+        "EventSource bawaan browser menangani auto-reconnect saat WiFi kafe terputus",
+        "Broadcast order.created, status_changed, completed, table.status_changed"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Ketahanan & Operasional Fisik",
+      "items": [
+        "Draft keranjang pelanggan tersimpan aman di localStorage HP",
+        "Modal preview struk + mode print khusus (@media print 80mm)",
+        "Proteksi hapus produk: ditolak jika pernah masuk riwayat transaksi"
+      ]
+    }
+  ]
+}
