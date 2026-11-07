@@ -100,6 +100,17 @@ async def update_order_status(
     order.status = new_status
     await db.commit()
     await db.refresh(order)
+
+    from app.services.sse_service import broadcaster
+    broadcaster.broadcast(
+        tenant_id=tenant_id,
+        event="order.status_changed",
+        data={
+            "order_id": str(order.id),
+            "table_number": order.table_number_snapshot,
+            "new_status": order.status,
+        },
+    )
     return Response(success=True, data={"order_id": str(order.id), "status": order.status})
 
 
@@ -156,6 +167,17 @@ async def move_table(
     order.table_number_snapshot = target_table.table_number
 
     await db.commit()
+
+    from app.services.sse_service import broadcaster
+    broadcaster.broadcast(
+        tenant_id=tenant_id,
+        event="table.status_changed",
+        data={
+            "order_id": str(order.id),
+            "old_table_number": order.table_number_snapshot,
+            "new_table_number": target_table.table_number,
+        },
+    )
     return Response(
         success=True,
         data={
@@ -208,6 +230,17 @@ async def cancel_order(
         table.status = "AVAILABLE"
 
     await db.commit()
+
+    from app.services.sse_service import broadcaster
+    broadcaster.broadcast(
+        tenant_id=tenant_id,
+        event="order.cancelled",
+        data={
+            "order_id": str(order.id),
+            "table_number": order.table_number_snapshot,
+            "cancellation_reason": order.cancellation_reason,
+        },
+    )
     return Response(
         success=True,
         data={

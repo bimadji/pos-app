@@ -3,11 +3,13 @@ import uuid
 from typing import Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select
+from sqlalchemy import select, func
 
 from app.core.database import get_db
 from app.deps.auth import get_current_user, enforce_tenant_id
 from app.models.category import Category
+from app.models.order import Order
+from app.models.order_item import OrderItem
 from app.models.product import Product
 from app.models.user import User
 from app.schemas.catalog import (
@@ -121,5 +123,23 @@ async def delete_product(
     _: Annotated[User, Depends(get_current_user)],
 ):
     product = await _get_tenant_product(product_id, tenant_id, db)
+
+    # Produk dengan riwayat pesanan tidak boleh dihapus (order_items RESTRICT
+    # menjaga price_snapshot transaksi lama); arahkan ke 'Tandai Habis'.
+    hist_stmt = (
+        select(func.count(OrderItem.id))
+        .join(Order, OrderItem.order_id == Order.id)
+        .where(OrderItem.product_id == product_id, Order.tenant_id == tenant_id)
+    )
+    order_count = (await db.execute(hist_stmt)).scalar() or 0
+    if order_count > 0:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "PRODUCT_IN_ORDER_HISTORY",
+                "message": f"Produk sudah terpakai di {order_count} riwayat pesanan dan tidak dapat dihapus. Gunakan 'Tandai Habis'.",
+            },
+        )
+
     await db.delete(product)
     await db.commit()
