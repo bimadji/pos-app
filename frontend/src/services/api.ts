@@ -131,6 +131,16 @@ export const api = {
   },
   withAuth: (token: string) => ({
     listTables: () => request<TableInfo[]>('/api/v1/tables', { headers: authHeaders(token) }),
+    createTable: (tableNumber: number) =>
+      request<TableInfo>(`/api/v1/tables?table_number=${tableNumber}`, {
+        method: 'POST',
+        headers: authHeaders(token),
+      }),
+    deleteTable: (tableId: string) =>
+      request<null>(`/api/v1/tables/${tableId}`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+      }),
     listActiveOrders: () =>
       request<Order[]>('/api/v1/orders/active', { headers: authHeaders(token) }),
     listProducts: () => request<Product[]>('/api/v1/products', { headers: authHeaders(token) }),

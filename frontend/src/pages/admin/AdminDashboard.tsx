@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, authStorage } from '../../services/api'
-import type { Category, Product, StaffAuth } from '../../services/api'
+import type { Category, Product, StaffAuth, TableInfo } from '../../services/api'
 
 export default function AdminDashboard() {
   const navigate = useNavigate()
@@ -17,15 +17,30 @@ export default function AdminDashboard() {
   const [newPrice, setNewPrice] = useState('')
   const [newStock, setNewStock] = useState('')
   const [newCategoryId, setNewCategoryId] = useState('')
+  const [tables, setTables] = useState<TableInfo[]>([])
+  const [metrics, setMetrics] = useState<{
+    total_sales: number
+    completed_orders: number
+    cash_total: number
+    qris_total: number
+  } | null>(null)
+  const [newTableNumber, setNewTableNumber] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ name: '', price: '', stock: '', category_id: '' })
 
   const loadCatalog = useCallback(async (authData: StaffAuth) => {
     const client = api.withAuth(authData.token)
     try {
-      const [p, c] = await Promise.all([client.listProducts(), client.listCategories()])
+      const [p, c, t, m] = await Promise.all([
+        client.listProducts(),
+        client.listCategories(),
+        client.listTables(),
+        client.getDailyMetrics(),
+      ])
       setProducts(p)
       setCategories(c)
+      setTables(t)
+      setMetrics(m)
       if (!newCategoryId && c.length > 0) setNewCategoryId(c[0].id)
     } catch (e) {
       setError((e as Error).message)
@@ -120,6 +135,35 @@ export default function AdminDashboard() {
       setError((err as Error).message)
     }
   }
+  const addTable = async (e: React.FormEvent) => {
+    e.preventDefault()
+    if (!auth) return
+    const num = Number(newTableNumber)
+    if (!num || num < 1) {
+      setError('Nomor meja minimal 1.')
+      return
+    }
+    setError(null)
+    try {
+      await api.withAuth(auth.token).createTable(num)
+      setNewTableNumber('')
+      await loadCatalog(auth)
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
+
+  const removeTable = async (tableId: string, tableNumber: number) => {
+    if (!auth) return
+    if (!window.confirm(`Hapus Meja ${tableNumber}? Meja yang pernah dipakai transaksi tidak dapat dihapus.`)) return
+    setError(null)
+    try {
+      await api.withAuth(auth.token).deleteTable(tableId)
+      await loadCatalog(auth)
+    } catch (err) {
+      setError((err as Error).message)
+    }
+  }
 
   // ---------- LOGIN VIEW ----------
   if (!auth) {
@@ -201,7 +245,38 @@ export default function AdminDashboard() {
       </header>
 
       <main className="p-4 space-y-4 max-w-5xl mx-auto">
-        {/* Metric cards */}
+        {/* 1. Kartu Metrik Penjualan Harian (Dashboard Penjualan) */}
+        <div>
+          <h2 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">Ringkasan Penjualan Hari Ini</h2>
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div className="bg-white border border-stone-200 rounded-lg p-3 shadow-sm">
+              <p className="text-[10px] text-stone-500 font-bold uppercase">Total Omzet</p>
+              <p className="text-lg font-black font-mono-num text-amber-800 mt-1">
+                Rp {(metrics?.total_sales ?? 0).toLocaleString('id-ID')}
+              </p>
+            </div>
+            <div className="bg-white border border-stone-200 rounded-lg p-3 shadow-sm">
+              <p className="text-[10px] text-stone-500 font-bold uppercase">Pesanan Selesai</p>
+              <p className="text-lg font-black font-mono-num text-stone-900 mt-1">
+                {metrics?.completed_orders ?? 0} Transaksi
+              </p>
+            </div>
+            <div className="bg-white border border-stone-200 rounded-lg p-3 shadow-sm">
+              <p className="text-[10px] text-stone-500 font-bold uppercase">Kas Tunai Masuk</p>
+              <p className="text-lg font-black font-mono-num text-emerald-700 mt-1">
+                Rp {(metrics?.cash_total ?? 0).toLocaleString('id-ID')}
+              </p>
+            </div>
+            <div className="bg-white border border-stone-200 rounded-lg p-3 shadow-sm">
+              <p className="text-[10px] text-stone-500 font-bold uppercase">QRIS Kasir</p>
+              <p className="text-lg font-black font-mono-num text-sky-700 mt-1">
+                Rp {(metrics?.qris_total ?? 0).toLocaleString('id-ID')}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* 2. Kartu Status Inventaris */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="bg-white border border-stone-200 rounded-lg p-3">
             <p className="text-[10px] text-stone-500 font-bold uppercase">Total Menu</p>
@@ -388,6 +463,71 @@ export default function AdminDashboard() {
                 )}
               </tbody>
             </table>
+          </div>
+        </div>
+
+        {/* 4. Kelola Meja Kafe (Tambah & Hapus Meja) */}
+        <div className="bg-white border border-stone-200 rounded-lg p-4">
+          <div className="flex justify-between items-center mb-3">
+            <div>
+              <h2 className="text-xs font-bold text-stone-800 uppercase">Kelola Meja Kafe ({tables.length} Meja)</h2>
+              <p className="text-[11px] text-stone-500">Tambah nomor meja baru atau hapus meja yang tidak digunakan.</p>
+            </div>
+            <button
+              onClick={() => navigate('/print-qr')}
+              className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 border border-stone-300 text-stone-800 rounded text-xs font-bold touch-target"
+            >
+              Lihat Lembar Cetak QR
+            </button>
+          </div>
+
+          {/* Form Tambah Meja */}
+          <form onSubmit={addTable} className="flex gap-2 max-w-sm mb-4">
+            <input
+              value={newTableNumber}
+              onChange={(e) => setNewTableNumber(e.target.value)}
+              placeholder="Nomor meja (misal: 13)"
+              type="number"
+              inputMode="numeric"
+              min="1"
+              className="flex-1 border border-stone-300 rounded px-3 py-1.5 text-sm font-mono-num touch-target"
+              aria-label="Nomor meja baru"
+            />
+            <button
+              type="submit"
+              className="px-4 py-1.5 bg-stone-900 hover:bg-stone-800 text-white rounded text-xs font-bold touch-target"
+            >
+              + Tambah Meja
+            </button>
+          </form>
+
+          {/* Daftar Meja & Tombol Hapus */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+            {tables.map((t) => (
+              <div
+                key={t.id}
+                className="border border-stone-200 rounded p-2.5 flex flex-col justify-between items-center text-center bg-stone-50"
+              >
+                <span className="text-xs font-black text-stone-900">Meja {t.table_number}</span>
+                <span className={`text-[10px] my-1 px-1.5 py-0.2 rounded font-semibold ${
+                  t.status === 'OCCUPIED' ? 'bg-amber-100 text-amber-900' : 'text-stone-500'
+                }`}>
+                  {t.status === 'OCCUPIED' ? 'Terisi' : 'Kosong'}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => void removeTable(t.id, t.table_number)}
+                  disabled={t.status === 'OCCUPIED'}
+                  className={`w-full mt-1 py-1 text-[10px] font-bold rounded ${
+                    t.status === 'OCCUPIED'
+                      ? 'bg-stone-100 text-stone-400 cursor-not-allowed'
+                      : 'bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200'
+                  }`}
+                >
+                  Hapus Meja
+                </button>
+              </div>
+            ))}
           </div>
         </div>
       </main>

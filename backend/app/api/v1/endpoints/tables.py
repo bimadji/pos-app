@@ -77,3 +77,39 @@ async def create_table(
             ),
         }
     )
+
+
+@router.delete("/{table_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_table(
+    table_id: uuid.UUID,
+    tenant_id: Annotated[uuid.UUID, Depends(enforce_tenant_id)],
+    db: Annotated[AsyncSession, Depends(get_db)],
+    _: Annotated[User, Depends(get_current_user)],
+):
+    """Delete table, but reject if occupied or has order history."""
+    stmt = select(Table).where(Table.id == table_id, Table.tenant_id == tenant_id)
+    table = (await db.execute(stmt)).scalar_one_or_none()
+    if not table:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail={"code": "TABLE_NOT_FOUND", "message": "Meja tidak ditemukan."},
+        )
+
+    if table.status == "OCCUPIED":
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={"code": "TABLE_OCCUPIED", "message": "Meja sedang terisi tamu aktif."},
+        )
+
+    try:
+        await db.delete(table)
+        await db.commit()
+    except Exception:
+        await db.rollback()
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail={
+                "code": "TABLE_HAS_HISTORY",
+                "message": "Meja memiliki riwayat transaksi dan tidak dapat dihapus.",
+            },
+        )
