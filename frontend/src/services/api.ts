@@ -121,11 +121,14 @@ export const api = {
     }),
 
   // --- Staff (Bearer JWT) ---
-  login: (tenantSlug: string, username: string, password: string) =>
-    request<StaffAuth>('/api/v1/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ tenant_slug: tenantSlug, username, password }),
-    }),
+  login: async (tenantSlug: string, username: string, password: string) => {
+    // Backend returns access_token; StaffAuth shape expects token
+    const data = await request<{ access_token: string; user: { username: string; role: string } }>(
+      '/api/v1/auth/login',
+      { method: 'POST', body: JSON.stringify({ tenant_slug: tenantSlug, username, password }) },
+    )
+    return { token: data.access_token, user: data.user } satisfies StaffAuth
+  },
   withAuth: (token: string) => ({
     listTables: () => request<TableInfo[]>('/api/v1/tables', { headers: authHeaders(token) }),
     listActiveOrders: () =>
