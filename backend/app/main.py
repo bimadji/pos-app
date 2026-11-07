@@ -27,6 +27,11 @@ app.add_middleware(
 # Global Exception Handler: Standard JSON response for validation errors
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    # exc.errors() can contain bytes input; stringify only the offending input field
+    details = [
+        {k: (v.decode(errors="ignore") if isinstance(v, bytes) else v) for k, v in err.items()}
+        for err in exc.errors()
+    ]
     return JSONResponse(
         status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
         content={
@@ -34,7 +39,7 @@ async def validation_exception_handler(request: Request, exc: RequestValidationE
             "error": {
                 "code": "VALIDATION_ERROR",
                 "message": "Format data masukan tidak valid.",
-                "details": exc.errors(),
+                "details": details,
             },
         },
     )

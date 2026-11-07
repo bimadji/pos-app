@@ -82,10 +82,10 @@ interface ApiBody {
 }
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const res = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options.headers },
-    ...options,
-  })
+  // Merge order matters: caller headers override the JSON default, not vice versa
+  const { headers: callerHeaders, ...rest } = options
+  const headers = { 'Content-Type': 'application/json', ...callerHeaders }
+  const res = await fetch(`${API_BASE}${path}`, { ...rest, headers })
   const body: ApiBody = await res.json().catch(() => ({}))
   if (!res.ok) {
     const detail = body.detail ?? body.error ?? {}
