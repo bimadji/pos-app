@@ -1,0 +1,256 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Arsitektur Kode Fase 3: Mesin Transaksi & Stok Atomik",
+    "subtitle": "Alur order multi-babak, void rollback stok, pelunasan idempotent, dan audit shift",
+    "output": ".archify/architecture-phase3-transactions-20261107-142333/phase3-architecture.html",
+    "quality_profile": "showcase",
+    "legend": {
+      "mode": "all",
+      "entries": {
+        "frontend": { "label": "Lapisan Endpoint & DTO" },
+        "backend": { "label": "Services & Logika Bisnis" },
+        "database": { "label": "Model ORM & PostgreSQL" },
+        "security": { "label": "Integritas & Anti-Korupsi Data" },
+        "external": { "label": "Aktor (Pelanggan & Kasir)" }
+      }
+    }
+  },
+  "components": [
+    {
+      "id": "customer",
+      "type": "external",
+      "label": "Pelanggan Meja",
+      "sublabel": "POST /orders via token QR",
+      "pos": [30, 180],
+      "size": [170, 70],
+      "icon": "person"
+    },
+    {
+      "id": "cashier",
+      "type": "external",
+      "label": "Kasir / Barista",
+      "sublabel": "VOID, MOVE, PAY & SHIFT",
+      "pos": [30, 600],
+      "size": [170, 70],
+      "icon": "person"
+    },
+    {
+      "id": "orders_endpoint",
+      "type": "frontend",
+      "label": "endpoints/orders.py",
+      "sublabel": "Submit order, multi-round, move, void",
+      "pos": [300, 180],
+      "size": [200, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "payment_endpoint",
+      "type": "frontend",
+      "label": "endpoints/payments.py",
+      "sublabel": "POST /pay + Idempotency-Key header",
+      "pos": [300, 420],
+      "size": [200, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "shifts_endpoint",
+      "type": "frontend",
+      "label": "endpoints/shifts.py",
+      "sublabel": "Open / Close shift kasir",
+      "pos": [300, 600],
+      "size": [200, 70],
+      "icon": "frontend"
+    },
+    {
+      "id": "order_service",
+      "type": "backend",
+      "label": "services/order_service.py",
+      "sublabel": "create_or_append_order & akumulasi",
+      "pos": [560, 180],
+      "size": [210, 70],
+      "icon": "backend"
+    },
+    {
+      "id": "atomic_stock",
+      "type": "security",
+      "label": "Atomic Stock Update",
+      "sublabel": "WHERE stock >= qty (anti-race condition)",
+      "pos": [560, 320],
+      "size": [210, 70],
+      "icon": "security",
+      "tag": "409 Guard"
+    },
+    {
+      "id": "idempotency_guard",
+      "type": "security",
+      "label": "Idempotency Guard",
+      "sublabel": "UNIQUE constraint payments.idempotency_key",
+      "pos": [560, 420],
+      "size": [210, 70],
+      "icon": "security",
+      "tag": "Anti-Dobel"
+    },
+    {
+      "id": "models_transactions",
+      "type": "database",
+      "label": "models/ (transactions)",
+      "sublabel": "Order, OrderItem, Payment, CashierShift",
+      "pos": [880, 180],
+      "size": [220, 70],
+      "icon": "database"
+    },
+    {
+      "id": "db_postgres",
+      "type": "database",
+      "label": "PostgreSQL (pos_cafe_db)",
+      "sublabel": "ACID Transaction Commit/Rollback",
+      "pos": [560, 600],
+      "size": [210, 70],
+      "icon": "database"
+    },
+    {
+      "id": "migration",
+      "type": "database",
+      "label": "Alembic 003",
+      "sublabel": "Migrasi 4 tabel transaksi",
+      "pos": [300, 740],
+      "size": [200, 70],
+      "icon": "database"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "backend/app (Mesin Transaksi Finansial)",
+      "wraps": ["orders_endpoint", "payment_endpoint", "shifts_endpoint", "order_service", "atomic_stock", "idempotency_guard", "models_transactions"]
+    },
+    {
+      "kind": "security-group",
+      "label": "Kunci Integritas Data (Rollback & Idempotent)",
+      "wraps": ["atomic_stock", "idempotency_guard"]
+    }
+  ],
+  "connections": [
+    {
+      "id": "cust-to-orders",
+      "from": "customer",
+      "to": "orders_endpoint",
+      "label": "QR Session",
+      "variant": "emphasis"
+    },
+    {
+      "id": "cashier-to-orders",
+      "from": "cashier",
+      "to": "orders_endpoint",
+      "label": "MOVE / VOID",
+      "variant": "dashed"
+    },
+    {
+      "id": "cashier-to-payments",
+      "from": "cashier",
+      "to": "payment_endpoint",
+      "label": "PAY Cash/QRIS",
+      "variant": "security"
+    },
+    {
+      "id": "cashier-to-shifts",
+      "from": "cashier",
+      "to": "shifts_endpoint",
+      "label": "Open / Close",
+      "variant": "dashed"
+    },
+    {
+      "id": "orders-to-service",
+      "from": "orders_endpoint",
+      "to": "order_service",
+      "label": "append",
+      "variant": "emphasis"
+    },
+    {
+      "id": "service-to-atomic",
+      "from": "order_service",
+      "to": "atomic_stock",
+      "label": "stock - qty",
+      "variant": "security",
+      "fromSide": "bottom",
+      "toSide": "top"
+    },
+    {
+      "id": "atomic-to-models",
+      "from": "atomic_stock",
+      "to": "models_transactions",
+      "label": "SQLAlchemy ORM",
+      "variant": "emphasis"
+    },
+    {
+      "id": "payment-to-guard",
+      "from": "payment_endpoint",
+      "to": "idempotency_guard",
+      "label": "check key",
+      "variant": "security"
+    },
+    {
+      "id": "guard-to-models",
+      "from": "idempotency_guard",
+      "to": "models_transactions",
+      "label": "UNIQUE",
+      "variant": "dashed"
+    },
+    {
+      "id": "models-to-db",
+      "from": "models_transactions",
+      "to": "db_postgres",
+      "label": "asyncpg ACID",
+      "variant": "emphasis"
+    },
+    {
+      "id": "migration-to-db",
+      "from": "migration",
+      "to": "db_postgres",
+      "label": "alembic upgrade",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Stok Atomik (Conditional Update)",
+      "items": [
+        "UPDATE products SET stock = stock - qty WHERE stock >= qty",
+        "Jika stok kurang: ROLLBACK transaksi otomatis + 409 Conflict",
+        "Stok tidak mungkin minus meski diserbu banyak meja sekaligus"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Pelunasan Idempotent (Idempotency-Key)",
+      "items": [
+        "Kasir menekan tombol bayar berkali-kali di jaringan lambat",
+        "UNIQUE constraint payments.idempotency_key mencegah mutasi ganda",
+        "Request identik mengembalikan respons awal tanpa dedup kas"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Multi-Babak & Snapshot Finansial",
+      "items": [
+        "Pesanan babak 2 otomatis terakumulasi di bon aktif meja",
+        "Menyimpan price_snapshot dan product_name_snapshot",
+        "Perhitungan pajak PB1 10% dan service charge 5% di server"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Audit Shift Kasir",
+      "items": [
+        "Open shift mengunci modal awal laci kasir",
+        "Close shift merekonsiliasi uang fisik vs mutasi penjualan sistem",
+        "Selisih kas dihitung presisi dengan Decimal arithmetic"
+      ]
+    }
+  ]
+}
+
+
