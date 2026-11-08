@@ -97,14 +97,11 @@ export default function CashierDashboard() {
 
   const selected = orders.find((o) => o.id === selectedOrderId) ?? null
 
-  // Total penjualan tunai
-  const totalCashSales = orders
-    .filter((o) => o.status === 'COMPLETED')
-    .reduce((sum, o) => sum + o.grand_total, 0)
-
-  // Estimasi total kas fisik di laci saat ini
-  const estimatedDrawerCash = (currentShift?.starting_cash ?? 0) + totalCashSales
-
+  // Metrik omzet shift aktif kasir saat ini
+  const shiftCashSales = currentShift?.cash_sales ?? 0
+  const shiftQrisSales = currentShift?.qris_sales ?? 0
+  const shiftTotalSales = currentShift?.total_sales ?? (shiftCashSales + shiftQrisSales)
+  const estimatedDrawerCash = currentShift?.expected_cash ?? ((currentShift?.starting_cash ?? 0) + shiftCashSales)
   // Pesanan PENDING paling baru untuk notification banner
   const latestPending = orders.find((o) => o.status === 'PENDING')
 
@@ -909,6 +906,10 @@ export default function CashierDashboard() {
               <div className="space-y-3 text-xs">
                 <div className="bg-stone-50 border border-stone-200 rounded p-3 space-y-1.5">
                   <div className="flex justify-between">
+                    <span className="text-stone-500">Kasir:</span>
+                    <span className="font-semibold text-stone-800">{auth.user.username}</span>
+                  </div>
+                  <div className="flex justify-between">
                     <span className="text-stone-500">Waktu Buka Shift:</span>
                     <span className="font-mono-num font-semibold text-stone-800">
                       {new Date(currentShift.opened_at).toLocaleTimeString('id-ID')}
@@ -921,13 +922,25 @@ export default function CashierDashboard() {
                     </span>
                   </div>
                   <div className="flex justify-between">
-                    <span className="text-stone-500">Total Penjualan Tunai:</span>
-                    <span className="font-mono-num font-semibold text-stone-800">
-                      Rp {totalCashSales.toLocaleString('id-ID')}
+                    <span className="text-stone-500">Penjualan Tunai:</span>
+                    <span className="font-mono-num font-semibold text-emerald-800">
+                      Rp {shiftCashSales.toLocaleString('id-ID')}
                     </span>
                   </div>
-                  <div className="flex justify-between font-bold pt-1.5 border-t border-dashed border-stone-300 text-stone-900">
-                    <span>Estimasi Uang Fisik di Laci:</span>
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Penjualan QRIS:</span>
+                    <span className="font-mono-num font-semibold text-sky-800">
+                      Rp {shiftQrisSales.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-bold pt-1.5 border-t border-stone-200 text-stone-900">
+                    <span>Total Omzet Shift:</span>
+                    <span className="font-mono-num text-stone-900">
+                      Rp {shiftTotalSales.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-bold pt-1 border-t border-dashed border-stone-300 text-stone-900">
+                    <span>Target Uang Fisik Laci:</span>
                     <span className="font-mono-num text-amber-800">
                       Rp {estimatedDrawerCash.toLocaleString('id-ID')}
                     </span>

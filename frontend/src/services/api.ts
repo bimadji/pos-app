@@ -52,6 +52,7 @@ export interface TableInfo {
 export interface CashierShift {
   id: string
   cashier_user_id: string
+  cashier_name?: string
   starting_cash: number
   expected_cash: number | null
   actual_cash: number | null
@@ -59,8 +60,29 @@ export interface CashierShift {
   notes: string | null
   opened_at: string
   closed_at: string | null
+  cash_sales?: number
+  qris_sales?: number
+  total_sales?: number
+  total_transactions?: number
 }
 
+export interface ShiftHistoryItem {
+  id: string
+  cashier_user_id: string
+  cashier_name: string
+  starting_cash: number
+  expected_cash: number | null
+  actual_cash: number | null
+  cash_difference: number | null
+  cash_sales: number
+  qris_sales: number
+  total_sales: number
+  total_transactions: number
+  notes: string | null
+  opened_at: string
+  closed_at: string | null
+  is_active: boolean
+}
 export interface StaffAuth {
   token: string
   user: { username: string; role: string }
@@ -256,6 +278,10 @@ export const api = {
         method: 'POST',
         headers: authHeaders(token),
         body: JSON.stringify({ actual_cash: actualCash, notes }),
+      }),
+    getShiftsHistory: (limit = 30) =>
+      request<ShiftHistoryItem[]>(`/api/v1/shifts/history?limit=${limit}`, {
+        headers: authHeaders(token),
       }),
     getDailyMetrics: (params?: { start_date?: string; end_date?: string }) => {
       const q = new URLSearchParams()

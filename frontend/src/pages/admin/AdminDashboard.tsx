@@ -1,8 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, authStorage } from '../../services/api'
-import type { Category, Product, StaffAuth, TableInfo } from '../../services/api'
-
+import type { Category, Product, StaffAuth, TableInfo, ShiftHistoryItem } from '../../services/api'
 export default function AdminDashboard() {
   const navigate = useNavigate()
   const [auth, setAuth] = useState<StaffAuth | null>(() => authStorage.load())
@@ -34,20 +33,23 @@ export default function AdminDashboard() {
   const [newTableNumber, setNewTableNumber] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState({ name: '', price: '', stock: '', category_id: '' })
+  const [shiftsHistory, setShiftsHistory] = useState<ShiftHistoryItem[]>([])
 
   const loadCatalog = useCallback(async (authData: StaffAuth, filterParams?: { start_date?: string; end_date?: string }) => {
     const client = api.withAuth(authData.token)
     try {
-      const [p, c, t, m] = await Promise.all([
+      const [p, c, t, m, s] = await Promise.all([
         client.listProducts(),
         client.listCategories(),
         client.listTables(),
         client.getDailyMetrics(filterParams),
+        client.getShiftsHistory(30).catch(() => []),
       ])
       setProducts(p)
       setCategories(c)
       setTables(t)
       setMetrics(m)
+      setShiftsHistory(s)
       if (!newCategoryId && c.length > 0) setNewCategoryId(c[0].id)
     } catch (e) {
       setError((e as Error).message)
@@ -538,6 +540,130 @@ export default function AdminDashboard() {
                   <p className="text-[10px] text-stone-500 mt-0.5">{m.orders_count} transaksi</p>
                 </div>
               ))}
+            </div>
+          )}
+        </div>
+
+        {/* 8. Audit & Riwayat Shift Kasir */}
+        <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm space-y-3">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center pb-2 border-b border-stone-200 gap-1">
+            <div>
+              <h3 className="text-xs font-bold text-stone-900 uppercase tracking-wider">
+                Audit &amp; Riwayat Shift Kasir
+              </h3>
+              <p className="text-xs text-stone-500 mt-0.5">
+                Pantau omzet tiap kasir, metode pembayaran, dan akuntabilitas uang fisik laci
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                if (auth) void loadCatalog(auth)
+              }}
+              className="text-xs text-amber-800 hover:text-amber-900 font-semibold self-start sm:self-auto touch-target"
+            >
+              ↻ Refresh Riwayat
+            </button>
+          </div>
+
+          {shiftsHistory.length === 0 ? (
+            <p className="text-xs text-stone-400 py-6 text-center">Belum ada riwayat shift kasir tercatat.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead>
+                  <tr className="border-b border-stone-200 text-stone-500 font-bold uppercase text-[10px]">
+                    <th className="py-2.5 px-3">Status</th>
+                    <th className="py-2.5 px-3">Waktu Buka / Tutup</th>
+                    <th className="py-2.5 px-3">Kasir</th>
+                    <th className="py-2.5 px-3 text-right">Modal Awal</th>
+                    <th className="py-2.5 px-3 text-right">Penjualan Tunai</th>
+                    <th className="py-2.5 px-3 text-right">Penjualan QRIS</th>
+                    <th className="py-2.5 px-3 text-right">Total Omzet</th>
+                    <th className="py-2.5 px-3 text-right">Fisik Laci</th>
+                    <th className="py-2.5 px-3 text-right">Selisih Kas</th>
+                    <th className="py-2.5 px-3">Catatan</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-stone-100">
+                  {shiftsHistory.map((s) => {
+                    const openTimeStr = new Date(s.opened_at).toLocaleString('id-ID', {
+                      day: '2-digit',
+                      month: 'short',
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                    const closeTimeStr = s.closed_at
+                      ? new Date(s.closed_at).toLocaleTimeString('id-ID', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })
+                      : 'Sedang Berjalan'
+
+                    return (
+                      <tr key={s.id} className="hover:bg-stone-50 transition">
+                        <td className="py-3 px-3 whitespace-nowrap">
+                          {s.is_active ? (
+                            <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                              Aktif
+                            </span>
+                          ) : (
+                            <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-stone-100 text-stone-600 border border-stone-200">
+                              Selesai
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 whitespace-nowrap text-stone-700 font-mono-num">
+                          <div>{openTimeStr}</div>
+                          <div className="text-[10px] text-stone-400">s.d. {closeTimeStr}</div>
+                        </td>
+                        <td className="py-3 px-3 font-semibold text-stone-900 whitespace-nowrap">
+                          {s.cashier_name}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono-num text-stone-700 whitespace-nowrap">
+                          Rp {s.starting_cash.toLocaleString('id-ID')}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono-num text-emerald-800 font-semibold whitespace-nowrap">
+                          Rp {s.cash_sales.toLocaleString('id-ID')}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono-num text-sky-800 font-semibold whitespace-nowrap">
+                          Rp {s.qris_sales.toLocaleString('id-ID')}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono-num font-bold text-stone-900 whitespace-nowrap">
+                          Rp {s.total_sales.toLocaleString('id-ID')}
+                          <div className="text-[10px] font-normal text-stone-400">
+                            {s.total_transactions} transaksi
+                          </div>
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono-num font-semibold text-stone-800 whitespace-nowrap">
+                          {s.actual_cash !== null ? `Rp ${s.actual_cash.toLocaleString('id-ID')}` : '-'}
+                        </td>
+                        <td className="py-3 px-3 text-right font-mono-num whitespace-nowrap">
+                          {s.cash_difference === null ? (
+                            <span className="text-stone-400">-</span>
+                          ) : s.cash_difference === 0 ? (
+                            <span className="text-emerald-700 font-bold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
+                              Cocok (Rp 0)
+                            </span>
+                          ) : s.cash_difference > 0 ? (
+                            <span className="text-sky-800 font-bold bg-sky-50 px-2 py-0.5 rounded border border-sky-200">
+                              +Rp {s.cash_difference.toLocaleString('id-ID')}
+                            </span>
+                          ) : (
+                            <span className="text-rose-700 font-bold bg-rose-50 px-2 py-0.5 rounded border border-rose-200">
+                              -Rp {Math.abs(s.cash_difference).toLocaleString('id-ID')}
+                            </span>
+                          )}
+                        </td>
+                        <td className="py-3 px-3 text-stone-600 max-w-[200px] truncate" title={s.notes ?? ''}>
+                          {s.notes || <span className="text-stone-300">-</span>}
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
