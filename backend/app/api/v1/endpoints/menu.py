@@ -36,10 +36,7 @@ async def get_public_menu(
 
     prod_stmt = (
         select(Product)
-        .where(
-            Product.tenant_id == table.tenant_id,
-            Product.is_available == True,
-        )
+        .where(Product.tenant_id == table.tenant_id)
         .order_by(Product.name)
     )
     prod_res = await db.execute(prod_stmt)
@@ -54,6 +51,7 @@ async def get_public_menu(
                 "description": p.description,
                 "price": float(p.price),
                 "stock": p.stock,
+                "is_available": p.is_available and (p.stock > 0),
                 "image_url": p.image_url,
             }
         )

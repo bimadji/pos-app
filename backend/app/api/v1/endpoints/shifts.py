@@ -104,7 +104,7 @@ async def get_current_shift(
     ).where(
         Payment.tenant_id == tenant_id,
         Payment.cashier_user_id == current_user.id,
-        Payment.payment_method == "QRIS",
+        Payment.payment_method.in_(["QRIS", "STATIC_QRIS"]),
         Payment.paid_at >= shift.opened_at,
     )
     qris_res = (await db.execute(qris_sales_stmt)).one()
@@ -236,7 +236,7 @@ async def get_shifts_history(
         qris_stmt = select(
             func.coalesce(func.sum(Payment.amount_tendered), Decimal("0.00")),
             func.count(Payment.id),
-        ).where(*time_filter, Payment.payment_method == "QRIS")
+        ).where(*time_filter, Payment.payment_method.in_(["QRIS", "STATIC_QRIS"]))
         qris_res = (await db.execute(qris_stmt)).one()
         qris_sales = float(qris_res[0] or 0.0)
         qris_count = int(qris_res[1] or 0)

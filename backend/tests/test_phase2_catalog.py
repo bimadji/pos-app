@@ -137,8 +137,8 @@ async def test_public_menu_requires_valid_token(client: AsyncClient, auth_header
 
 
 @pytest.mark.asyncio
-async def test_sold_out_product_hidden_from_public_menu(client: AsyncClient, auth_headers, category, product):
-    """Sold-out race guard at catalog level: toggled-off product disappears from the menu."""
+async def test_sold_out_product_marked_unavailable_in_public_menu(client: AsyncClient, auth_headers, category, product):
+    """Sold-out product remains visible in public catalog with is_available=False."""
     res = await client.post("/api/v1/tables?table_number=9", headers=auth_headers)
     table = res.json()["data"]
 
@@ -148,4 +148,5 @@ async def test_sold_out_product_hidden_from_public_menu(client: AsyncClient, aut
         f"/api/v1/menu?table_id={table['id']}&token={table['qr_token']}"
     )
     items = res.json()["data"][0]["items"]
-    assert all(i["id"] != product["id"] for i in items)
+    toggled_item = next(i for i in items if i["id"] == product["id"])
+    assert toggled_item["is_available"] is False

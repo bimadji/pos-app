@@ -82,13 +82,31 @@ export default function CustomerMenu() {
 
   useSSE(api.sseUrl({ tableId, token }), (ev) => {
     if (!order) return
-    const data = ev.data as { order_id?: string; new_status?: string; grand_total?: number } | null
+    const data = ev.data as {
+      order_id?: string
+      new_status?: string
+      grand_total?: number
+      new_table_number?: number
+      cancellation_reason?: string
+    } | null
     if (!data || data.order_id !== order.id) return
     if (ev.event === 'order.status_changed' && data.new_status) {
       setOrder((prev) => (prev ? { ...prev, status: data.new_status! } : prev))
     }
     if (ev.event === 'order.completed') {
       setOrder((prev) => (prev ? { ...prev, status: 'COMPLETED' } : prev))
+    }
+    if (ev.event === 'order.cancelled') {
+      setOrder(null)
+      setPhase('menu')
+      window.alert(
+        data.cancellation_reason
+          ? `Pesanan dibatalkan kasir (${data.cancellation_reason}). Kembali ke menu.`
+          : 'Pesanan telah dibatalkan oleh kasir. Kembali ke menu.',
+      )
+    }
+    if (ev.event === 'order.table_moved' && data.new_table_number) {
+      setOrder((prev) => (prev ? { ...prev, table_number_snapshot: data.new_table_number! } : prev))
     }
   })
 
@@ -286,27 +304,53 @@ export default function CustomerMenu() {
         {visibleItems.length === 0 && (
           <p className="text-center text-stone-500 text-xs py-8">Belum ada menu di kategori ini.</p>
         )}
-        {visibleItems.map((item) => (
-          <div key={item.id} className="bg-white border border-stone-200 rounded-lg p-3 flex justify-between items-start gap-3">
-            <div className="flex-1">
-              <h3 className="text-sm font-bold text-stone-900">{item.name}</h3>
-              {item.description && <p className="text-xs text-stone-600 mt-0.5">{item.description}</p>}
-              <p className="text-sm font-bold font-mono-num text-amber-800 mt-1">
-                Rp {item.price.toLocaleString('id-ID')}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setNoteTarget({ item, itemType: activeItemType })
-                setNoteText('')
-                setSelectedOptions({})
-              }}
-              className="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target"
+        {visibleItems.map((item) => {
+          const isSoldOut = item.is_available === false || item.stock <= 0
+          return (
+            <div
+              key={item.id}
+              className={`border rounded-lg p-3 flex justify-between items-start gap-3 transition ${
+                isSoldOut
+                  ? 'bg-stone-50 border-stone-200 opacity-70'
+                  : 'bg-white border-stone-200'
+              }`}
             >
-              Tambah
-            </button>
-          </div>
-        ))}
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className={`text-sm font-bold ${isSoldOut ? 'text-stone-500' : 'text-stone-900'}`}>
+                    {item.name}
+                  </h3>
+                  {isSoldOut && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                      Habis
+                    </span>
+                  )}
+                </div>
+                {item.description && <p className="text-xs text-stone-500 mt-0.5">{item.description}</p>}
+                <p className={`text-sm font-bold font-mono-num mt-1 ${isSoldOut ? 'text-stone-400' : 'text-amber-800'}`}>
+                  Rp {item.price.toLocaleString('id-ID')}
+                </p>
+              </div>
+              {isSoldOut ? (
+                <span className="px-3 py-2 bg-stone-200 text-stone-500 text-xs font-bold rounded cursor-not-allowed select-none">
+                  Habis
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNoteTarget({ item, itemType: activeItemType })
+                    setNoteText('')
+                    setSelectedOptions({})
+                  }}
+                  className="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target shadow-sm"
+                >
+                  Tambah
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
 
       {/* Sticky cart bar: buka keranjang untuk ubah atau hapus item */}

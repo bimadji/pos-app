@@ -6,6 +6,7 @@ export interface CategoryItem {
   description: string | null
   price: number
   stock: number
+  is_available?: boolean
   image_url: string | null
 }
 

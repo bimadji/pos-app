@@ -180,6 +180,7 @@ async def move_table(
     # 3. Bebaskan meja lama, duduki meja baru
     old_table_stmt = select(Table).where(Table.id == order.table_id)
     old_table = (await db.execute(old_table_stmt)).scalar_one()
+    old_table_number = old_table.table_number
     old_table.status = "AVAILABLE"
 
     target_table.status = "OCCUPIED"
@@ -191,10 +192,19 @@ async def move_table(
     from app.services.sse_service import broadcaster
     broadcaster.broadcast(
         tenant_id=tenant_id,
+        event="order.table_moved",
+        data={
+            "order_id": str(order.id),
+            "old_table_number": old_table_number,
+            "new_table_number": target_table.table_number,
+        },
+    )
+    broadcaster.broadcast(
+        tenant_id=tenant_id,
         event="table.status_changed",
         data={
             "order_id": str(order.id),
-            "old_table_number": order.table_number_snapshot,
+            "old_table_number": old_table_number,
             "new_table_number": target_table.table_number,
         },
     )
