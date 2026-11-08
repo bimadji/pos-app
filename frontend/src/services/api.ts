@@ -217,6 +217,15 @@ export const api = {
           body: JSON.stringify({ cancellation_reason: reason }),
         },
       ),
+    moveTable: (orderId: string, newTableNumber: number) =>
+      request<{ order_id: string; table_number: number; message: string }>(
+        `/api/v1/orders/${orderId}/move-table`,
+        {
+          method: 'PATCH',
+          headers: authHeaders(token),
+          body: JSON.stringify({ new_table_number: newTableNumber }),
+        },
+      ),
     getDailyMetrics: (params?: { start_date?: string; end_date?: string }) => {
       const q = new URLSearchParams()
       if (params?.start_date) q.set('start_date', params.start_date)

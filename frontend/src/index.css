@@ -28,35 +28,40 @@ select:focus-visible {
 
 @media print {
   @page {
-    /* Standar thermal printer 58mm/80mm: hilangkan margin browser (header URL & page number) */
+    /* Standar thermal printer 58mm/80mm: hilangkan margin browser */
     size: auto;
     margin: 0;
   }
 
   html, body {
     width: 100% !important;
+    height: auto !important;
+    min-height: 100% !important;
     margin: 0 !important;
     padding: 0 !important;
     background: white !important;
     color: black !important;
+    overflow: visible !important;
   }
 
-  /* Sembunyikan semua konten aplikasi */
+  /* Sembunyikan semua konten aplikasi root */
   body.printing-receipt #root {
+    display: none !important;
     visibility: hidden !important;
   }
 
   /* Tampilkan hanya wadah struk, letakkan di pojok kiri atas kertas */
   body.printing-receipt .receipt-backdrop {
     visibility: visible !important;
-    position: absolute !important;
-    top: 0 !important;
-    left: 0 !important;
-    inset: auto !important;
-    width: auto !important;
+    display: block !important;
+    position: static !important;
+    width: 100% !important;
+    height: auto !important;
+    min-height: auto !important;
     background: white !important;
     padding: 0 !important;
     margin: 0 !important;
+    overflow: visible !important;
   }
 
   body.printing-receipt .receipt-backdrop * {
@@ -69,21 +74,31 @@ select:focus-visible {
     border-radius: 0 !important;
     max-width: 58mm !important;
     width: 58mm !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible !important;
     margin: 0 !important;
     padding: 0 !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
   }
 
   .receipt-print-area {
     width: 58mm !important;
     max-width: 58mm !important;
+    height: auto !important;
     font-family: 'JetBrains Mono', 'Courier New', Courier, monospace !important;
-    font-size: 11px !important;
-    line-height: 1.25 !important;
+    font-size: 10px !important;
+    line-height: 1.2 !important;
     margin: 0 !important;
-    padding: 4mm 3mm !important;
+    padding: 3mm 2mm 8mm 2mm !important;
     box-shadow: none !important;
     background: white !important;
     color: black !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    page-break-before: avoid !important;
+    page-break-after: avoid !important;
   }
 
   .no-print {
