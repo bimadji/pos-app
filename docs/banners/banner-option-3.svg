@@ -1,0 +1,50 @@
+<svg viewBox="0 0 1200 480" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1200" height="480" fill="#18181b" />
+  <rect x="24" y="24" width="1152" height="432" fill="#27272a" stroke="#3f3f46" stroke-width="2" rx="8" />
+
+  <!-- Brand Emblem -->
+  <g transform="translate(80, 80)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+    <rect width="48" height="48" rx="8" fill="#d97706" />
+    <text x="24" y="32" fill="#fafafa" font-size="22" font-weight="900" text-anchor="middle">KS</text>
+    <text x="64" y="24" fill="#fafafa" font-size="18" font-weight="800">KAFE SENJA POS</text>
+    <text x="64" y="42" fill="#a1a1aa" font-size="12" font-weight="500">Dine-in Web Point of Sale</text>
+  </g>
+
+  <!-- Big Headline -->
+  <g transform="translate(80, 180)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+    <text x="0" y="0" fill="#fafafa" font-size="44" font-weight="900" letter-spacing="-1">
+      Teknologi Kasir &amp; Self-Order Meja
+    </text>
+    <text x="0" y="50" fill="#fbbf24" font-size="44" font-weight="900" letter-spacing="-1">
+      Siap Pakai untuk Kafe 10–25 Meja.
+    </text>
+
+    <text x="0" y="100" fill="#d4d4d8" font-size="16" font-weight="400">
+      Solusi penuh dari QR pelanggan, antrean masak dapur, pelunasan kasir, hingga pembukuan pemilik.
+    </text>
+  </g>
+
+  <!-- 3 Feature Columns at Bottom -->
+  <g transform="translate(80, 320)" font-family="-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif">
+    <!-- Col 1 -->
+    <g transform="translate(0, 0)">
+      <text x="0" y="0" fill="#fbbf24" font-size="13" font-weight="700">01 / PELANGGAN</text>
+      <text x="0" y="22" fill="#fafafa" font-size="15" font-weight="700">Zero-Install Order</text>
+      <text x="0" y="42" fill="#a1a1aa" font-size="12">Pindai QR meja &amp; pesan mandiri</text>
+    </g>
+
+    <!-- Col 2 -->
+    <g transform="translate(360, 0)">
+      <text x="0" y="0" fill="#fbbf24" font-size="13" font-weight="700">02 / KASIR &amp; DAPUR</text>
+      <text x="0" y="22" fill="#fafafa" font-size="15" font-weight="700">Tiket Babak &amp; Laci Kas</text>
+      <text x="0" y="42" fill="#a1a1aa" font-size="12">Multi-round, void stok, &amp; 58mm</text>
+    </g>
+
+    <!-- Col 3 -->
+    <g transform="translate(720, 0)">
+      <text x="0" y="0" fill="#fbbf24" font-size="13" font-weight="700">03 / PEMILIK</text>
+      <text x="0" y="22" fill="#fafafa" font-size="15" font-weight="700">Audit &amp; Ekspor CSV</text>
+      <text x="0" y="42" fill="#a1a1aa" font-size="12">Omzet live &amp; rekonsiliasi shift</text>
+    </g>
+  </g>
+</svg>
