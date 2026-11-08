@@ -38,6 +38,12 @@ Aplikasi Point of Sale (POS) dine-in multi-tenant berbasis web yang dirancang un
 
 ## Arsitektur Sistem
 
+> **Eksplorasi Interaktif:** Diagram arsitektur interaktif dapat diakses langsung via GitHub Pages:  
+> 👉 **[https://bimadji.github.io/pos-app/](https://bimadji.github.io/pos-app/)**  
+> *(Mendukung navigasi zoom, pan, sorot alur data antarkomponen, saklar dark/light mode, dan ekspor SVG/PNG).*
+
+[![Diagram Arsitektur Kafe Dine-in POS](docs/architecture-diagram.svg)](https://bimadji.github.io/pos-app/)
+
 ```
 [Pelanggan HP]              [Kasir & Dapur Tablet/PC]             [Pemilik Laptop/PC]
   (/t/:tableId)                    (/cashier)                           (/admin)
@@ -65,10 +71,6 @@ Aplikasi Point of Sale (POS) dine-in multi-tenant berbasis web yang dirancang un
 │ • cashier_shifts (starting_cash, expected_cash, actual_cash, cash_difference)    │
 └──────────────────────────────────────────────────────────────────────────────────┘
 ```
-
-Diagram visual interaktif yang telah divalidasi kualitas showcase dapat dibuka di:  
-`.archify/architecture-phase5-ops-deployment-20261108-164500/architecture-phase5.html`
-
 ---
 
 ## Dokumentasi API (Swagger & ReDoc)
