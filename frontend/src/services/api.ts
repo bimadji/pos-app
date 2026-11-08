@@ -200,11 +200,14 @@ export const api = {
         method: 'DELETE',
         headers: authHeaders(token),
       }),
-    updateOrderStatus: (orderId: string, newStatus: string) =>
-      request<{ order_id: string; status: string }>(
-        `/api/v1/orders/${orderId}/status?new_status=${newStatus}`,
+    updateOrderStatus: (orderId: string, newStatus: string, roundNumber?: number) => {
+      const q = new URLSearchParams({ new_status: newStatus })
+      if (roundNumber !== undefined) q.set('round_number', String(roundNumber))
+      return request<{ order_id: string; status: string }>(
+        `/api/v1/orders/${orderId}/status?${q.toString()}`,
         { method: 'PATCH', headers: authHeaders(token) },
-      ),
+      )
+    },
     payOrder: (orderId: string, payload: { payment_method: string; amount_tendered: number }) =>
       request<{
         payment_id: string

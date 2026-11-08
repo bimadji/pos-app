@@ -223,14 +223,24 @@ export default function CashierDashboard() {
 
     const rounds = Array.from(roundsMap.entries()).sort(([a], [b]) => a - b)
     return rounds.map(([roundNum, items]) => {
-      // Hitung subtotal ronde ini
       const roundTotal = items.reduce((sum, i) => sum + i.subtotal, 0)
+      const statuses = items.map((i) => i.item_status || 'PENDING')
+      let roundStatus = 'PENDING'
+      if (statuses.every((s) => s === 'SERVED')) {
+        roundStatus = 'SERVED'
+      } else if (statuses.some((s) => s === 'COOKING')) {
+        roundStatus = 'COOKING'
+      } else {
+        roundStatus = 'PENDING'
+      }
+
       return {
         ticketKey: `${ord.id}-round-${roundNum}`,
         order: ord,
         roundNumber: roundNum,
         items,
         roundTotal,
+        roundStatus,
         isLatestRound: roundNum === rounds[rounds.length - 1][0],
         totalRounds: rounds.length,
       }
@@ -737,8 +747,8 @@ export default function CashierDashboard() {
                     {kitchenTickets.map((ticket) => {
                       const ord = ticket.order
                       const timeStr = ord.created_at ? new Date(ord.created_at).toLocaleTimeString('id-ID') : '-'
-                      const isPending = ord.status === 'PENDING'
-                      const isCooking = ord.status === 'COOKING'
+                      const isPending = ticket.roundStatus === 'PENDING'
+                      const isCooking = ticket.roundStatus === 'COOKING'
 
                       return (
                         <tr key={ticket.ticketKey} className="hover:bg-stone-50 transition">
@@ -784,7 +794,7 @@ export default function CashierDashboard() {
                                     : 'bg-emerald-100 text-emerald-900'
                               }`}
                             >
-                              {STATUS_LABEL[ord.status] ?? ord.status}
+                              {STATUS_LABEL[ticket.roundStatus] ?? ticket.roundStatus}
                             </span>
                           </td>
                           <td className="py-3 px-3 text-right whitespace-nowrap">
@@ -792,16 +802,16 @@ export default function CashierDashboard() {
                               {isPending && (
                                 <button
                                   type="button"
-                                  onClick={() => void act(() => api.withAuth(auth.token).updateOrderStatus(ord.id, 'COOKING'))}
+                                  onClick={() => void act(() => api.withAuth(auth.token).updateOrderStatus(ord.id, 'COOKING', ticket.roundNumber))}
                                   className="px-3 py-1.5 bg-amber-700 hover:bg-amber-800 text-white rounded font-bold touch-target shadow-sm"
                                 >
                                   Mulai Masak
-                                </button>
-                              )}
-                              {isCooking && (
-                                <button
-                                  type="button"
-                                  onClick={() => void act(() => api.withAuth(auth.token).updateOrderStatus(ord.id, 'SERVED'))}
+                                 </button>
+                               )}
+                               {isCooking && (
+                                 <button
+                                   type="button"
+                                  onClick={() => void act(() => api.withAuth(auth.token).updateOrderStatus(ord.id, 'SERVED', ticket.roundNumber))}
                                   className="px-3 py-1.5 bg-emerald-700 hover:bg-emerald-800 text-white rounded font-bold touch-target shadow-sm"
                                 >
                                   Siap Saji

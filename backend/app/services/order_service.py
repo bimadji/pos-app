@@ -56,7 +56,7 @@ async def create_or_append_order(
         )
         last_round = (await db.execute(round_stmt)).scalars().first() or 1
         current_round = last_round + 1
-
+        order.status = "PENDING"
     # 2. Conditional Atomic Update: potong stok tiap item
     new_subtotal_delta = Decimal("0.00")
 
