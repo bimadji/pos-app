@@ -28,7 +28,10 @@ export function useSSE(url: string | null, onEvent: (ev: SSEEvent) => void) {
       'order.status_changed',
       'order.completed',
       'order.cancelled',
+      'order.table_moved',
       'table.status_changed',
+      'shift.opened',
+      'shift.closed',
     ]
     const listeners = events.map((name) => {
       const listener = (e: MessageEvent) => {

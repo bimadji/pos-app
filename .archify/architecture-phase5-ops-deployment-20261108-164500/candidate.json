@@ -1,0 +1,74 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Kafe Dine-in POS: Phase 5 Ops, Deployment & Realtime Lifecycle",
+    "output": "architecture-phase5.html",
+    "quality_profile": "showcase"
+  },
+  "components": [
+    { "id": "customer_ui", "type": "frontend", "label": "Customer HP", "sublabel": "Web QR Scan (/t/:id)", "pos": [40, 100], "size": [140, 64], "tag": "Zero Install" },
+    { "id": "cashier_ui", "type": "frontend", "label": "Cashier & Dapur", "sublabel": "Tablet / PC (/cashier)", "pos": [40, 260], "size": [140, 64], "tag": "58mm Print" },
+    { "id": "admin_ui", "type": "frontend", "label": "Owner Portal", "sublabel": "Dashboard (/admin)", "pos": [40, 420], "size": [140, 64], "tag": "Audit & CSV" },
+    { "id": "sse_hub", "type": "messagebus", "label": "SSE Broadcaster", "sublabel": "In-Memory Event Hub", "pos": [300, 100], "size": [150, 64], "tag": "Auto-Reconnect" },
+    { "id": "api_gateway", "type": "backend", "label": "FastAPI Gateway", "sublabel": "Python 3.11+ REST", "pos": [300, 260], "size": [150, 64], "tag": "JWT + HMAC" },
+    { "id": "shift_module", "type": "backend", "label": "Shift & Cash Recon", "sublabel": "Drawer Float & Audit", "pos": [300, 420], "size": [150, 64], "tag": "Cash vs QRIS" },
+    { "id": "order_engine", "type": "backend", "label": "Order & Multi-Round", "sublabel": "Atomic Stock Lock", "pos": [560, 180], "size": [150, 64], "tag": "Round Ticket" },
+    { "id": "reports_engine", "type": "backend", "label": "Reports & Analytics", "sublabel": "Daily, Monthly, CSV", "pos": [560, 340], "size": [150, 64], "tag": "Stream Export" },
+    { "id": "postgres_db", "type": "database", "label": "PostgreSQL DB", "sublabel": "Row-Level Multi-Tenant", "pos": [810, 260], "size": [150, 64], "tag": "ACID Transactions" }
+  ],
+  "boundaries": [
+    { "kind": "region", "label": "Client Portals (React 18 + Vite + Tailwind)", "wraps": ["customer_ui", "cashier_ui", "admin_ui"] },
+    { "kind": "security-group", "label": "Backend Application (FastAPI & Async Engine)", "wraps": ["sse_hub", "api_gateway", "shift_module", "order_engine", "reports_engine"] },
+    { "kind": "region", "label": "Relational Multi-Tenant Data Store", "wraps": ["postgres_db"] }
+  ],
+  "connections": [
+    { "id": "cust-to-api", "from": "customer_ui", "to": "api_gateway", "label": "Order", "variant": "emphasis" },
+    { "id": "cashier-to-api", "from": "cashier_ui", "to": "api_gateway", "label": "Pay, Void", "variant": "emphasis" },
+    { "id": "admin-to-api", "from": "admin_ui", "to": "api_gateway", "label": "Metrics", "variant": "emphasis" },
+    { "id": "sse-to-cust", "from": "sse_hub", "to": "customer_ui", "label": "live SSE", "variant": "dashed", "fromSide": "left", "toSide": "right" },
+    { "id": "sse-to-cashier", "from": "sse_hub", "to": "cashier_ui", "label": "kitchen stream", "variant": "dashed", "fromSide": "bottom", "toSide": "top" },
+    { "id": "api-to-order", "from": "api_gateway", "to": "order_engine" },
+    { "id": "api-to-reports", "from": "api_gateway", "to": "reports_engine" },
+    { "id": "api-to-shift", "from": "api_gateway", "to": "shift_module" },
+    { "id": "api-to-sse", "from": "api_gateway", "to": "sse_hub", "label": "event pub", "fromSide": "top", "toSide": "bottom" },
+    { "id": "order-to-db", "from": "order_engine", "to": "postgres_db", "label": "stock & bill" },
+    { "id": "reports-to-db", "from": "reports_engine", "to": "postgres_db", "label": "aggregates" },
+    { "id": "shift-to-db", "from": "shift_module", "to": "postgres_db", "label": "shifts" }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "Customer Lifecycle & Tracking",
+      "items": [
+        "Scan QR meja membawa token bertanda-tangan kriptografis",
+        "Katalog menu menampilkan status Habis tanpa menyembunyikan item",
+        "Multi-round order babak baru tidak menimpa pesanan sebelumnya",
+        "Penanganan void kasir otomatis mengembalikan customer ke menu",
+        "Pindah meja otomatis menyinkronkan nomor meja di HP customer"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Cashier & Kitchen Operations",
+      "items": [
+        "Antrean masak stream memisahkan tiket per babak (round_number)",
+        "Status babak independen: Babak 1 Sedang Dimasak, Babak 2 Baru Masuk",
+        "Modal laci: Buka modal awal, monitoring live omzet tunai & QRIS",
+        "Tutup shift: Rekonsiliasi kas fisik laci vs sistem (cocok/selisih)",
+        "Print thermal 58mm rapat tanpa page-break di tengah menu"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "Owner Portal & Financial Audit",
+      "items": [
+        "4 Financial Metric Cards: Omzet, Tunai, QRIS, Stok Menipis",
+        "Tren penjualan 7 hari berdampingan dengan menu paling sering dipesan",
+        "Rekapitulasi omzet bulanan (12 bulan terakhir)",
+        "Audit & Riwayat Shift Kasir realtime via SSE",
+        "Unduh CSV laporan keuangan dan cetak QR code meja kafe"
+      ]
+    }
+  ]
+}

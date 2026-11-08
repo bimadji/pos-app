@@ -37,6 +37,7 @@ async def order_stream(
     db: Annotated[AsyncSession, Depends(get_db)],
     table_id: Annotated[uuid.UUID | None, Query()] = None,
     token: Annotated[str | None, Query()] = None,
+    staff_token: Annotated[str | None, Query()] = None,
     payload: dict | None = Depends(get_optional_token_payload),
 ):
     """Realtime order events.
@@ -50,9 +51,23 @@ async def order_stream(
             table_id=table_id, token=token, db=db
         )
         tenant_id = table.tenant_id
+    elif staff_token:
+        from fastapi import HTTPException, status
+        from jwt import PyJWTError
+        from app.core.security import decode_access_token
+        try:
+            token_payload = decode_access_token(staff_token)
+        except PyJWTError:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail={
+                    "code": "INVALID_CREDENTIALS",
+                    "message": "Token tidak valid atau telah kadaluarsa.",
+                },
+            )
+        tenant_id = uuid.UUID(token_payload["tenant_id"])
     elif payload:
-        from uuid import UUID
-        tenant_id = UUID(payload["tenant_id"])
+        tenant_id = uuid.UUID(payload["tenant_id"])
     else:
         from fastapi import HTTPException, status
         raise HTTPException(
@@ -62,7 +77,6 @@ async def order_stream(
                 "message": "Sertakan JWT staf atau token meja yang sah.",
             },
         )
-
     subscriber = broadcaster.subscribe(tenant_id)
     return StreamingResponse(
         _event_stream(subscriber),

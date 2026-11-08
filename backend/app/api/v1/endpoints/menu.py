@@ -36,10 +36,7 @@ async def get_public_menu(
 
     prod_stmt = (
         select(Product)
-        .where(
-            Product.tenant_id == table.tenant_id,
-            Product.is_available == True,
-        )
+        .where(Product.tenant_id == table.tenant_id)
         .order_by(Product.name)
     )
     prod_res = await db.execute(prod_stmt)
@@ -54,6 +51,7 @@ async def get_public_menu(
                 "description": p.description,
                 "price": float(p.price),
                 "stock": p.stock,
+                "is_available": p.is_available and (p.stock > 0),
                 "image_url": p.image_url,
             }
         )
@@ -62,8 +60,22 @@ async def get_public_menu(
         {
             "category_id": str(c.id),
             "category_name": c.name,
+            "item_type": c.item_type,
             "items": by_category.get(c.id, []),
         }
         for c in categories
     ]
     return Response(data=data)
+
+
+@router.get("/session", response_model=Response)
+async def get_customer_session(
+    table: Annotated[Table, Depends(get_table_session)],
+):
+    """Public endpoint to get current validated table number for customer header."""
+    return Response(
+        data={
+            "table_id": str(table.id),
+            "table_number": table.table_number,
+        }
+    )

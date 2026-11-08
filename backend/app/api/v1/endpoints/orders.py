@@ -80,15 +80,20 @@ async def update_order_status(
     tenant_id: Annotated[uuid.UUID, Depends(enforce_tenant_id)],
     db: Annotated[AsyncSession, Depends(get_db)],
     _: Annotated[User, Depends(get_current_user)],
+    round_number: int | None = None,
 ):
-    """Barista/Cashier updates order lifecycle status (COOKING, SERVED)."""
+    """Barista/Cashier updates order or round lifecycle status (COOKING, SERVED)."""
     if new_status not in ["COOKING", "SERVED"]:
         raise HTTPException(
             status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
             detail={"code": "INVALID_STATUS", "message": "Status hanya boleh COOKING atau SERVED."},
         )
 
-    stmt = select(Order).where(Order.id == order_id, Order.tenant_id == tenant_id)
+    stmt = (
+        select(Order)
+        .where(Order.id == order_id, Order.tenant_id == tenant_id)
+        .options(selectinload(Order.items))
+    )
     order = (await db.execute(stmt)).scalar_one_or_none()
 
     if not order or order.status in ["COMPLETED", "CANCELLED"]:
@@ -97,7 +102,22 @@ async def update_order_status(
             detail={"code": "ORDER_NOT_EDITABLE", "message": "Pesanan tidak dapat diubah statusnya."},
         )
 
-    order.status = new_status
+    # Update item_status per item
+    for item in order.items:
+        if round_number is None or item.round_number == round_number:
+            item.item_status = new_status
+
+    # Tentukan status agregat order meja
+    statuses = [i.item_status for i in order.items]
+    if any(s == "PENDING" for s in statuses):
+        order.status = "PENDING"
+    elif any(s == "COOKING" for s in statuses):
+        order.status = "COOKING"
+    elif all(s == "SERVED" for s in statuses):
+        order.status = "SERVED"
+    else:
+        order.status = new_status
+
     await db.commit()
     await db.refresh(order)
 
@@ -160,6 +180,7 @@ async def move_table(
     # 3. Bebaskan meja lama, duduki meja baru
     old_table_stmt = select(Table).where(Table.id == order.table_id)
     old_table = (await db.execute(old_table_stmt)).scalar_one()
+    old_table_number = old_table.table_number
     old_table.status = "AVAILABLE"
 
     target_table.status = "OCCUPIED"
@@ -171,10 +192,19 @@ async def move_table(
     from app.services.sse_service import broadcaster
     broadcaster.broadcast(
         tenant_id=tenant_id,
+        event="order.table_moved",
+        data={
+            "order_id": str(order.id),
+            "old_table_number": old_table_number,
+            "new_table_number": target_table.table_number,
+        },
+    )
+    broadcaster.broadcast(
+        tenant_id=tenant_id,
         event="table.status_changed",
         data={
             "order_id": str(order.id),
-            "old_table_number": order.table_number_snapshot,
+            "old_table_number": old_table_number,
             "new_table_number": target_table.table_number,
         },
     )

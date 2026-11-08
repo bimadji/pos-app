@@ -6,6 +6,21 @@ import { useCart } from '../../hooks/useCart'
 import { useSSE } from '../../hooks/useSSE'
 
 type Phase = 'menu' | 'tracking'
+type ItemType = 'DRINK' | 'FOOD' | 'SNACK'
+
+const NOTE_CHIP_GROUPS: Record<ItemType, { label: string; chips: string[] }[]> = {
+  DRINK: [
+    { label: 'Level Es', chips: ['Normal Ice', 'Less Ice', 'No Ice', 'Extra Ice'] },
+    { label: 'Level Gula', chips: ['Normal Sugar', 'Less Sugar (50%)', 'No Sugar'] },
+  ],
+  FOOD: [
+    { label: 'Level Pedas', chips: ['Tidak Pedas', 'Pedas Sedang', 'Extra Pedas'] },
+    { label: 'Tambahan', chips: ['Tanpa Bawang', 'Pisah Saus', 'Tanpa Sayur'] },
+  ],
+  SNACK: [
+    { label: 'Penyajian', chips: ['Pisah Saus', 'Tanpa Saus', 'Hangat Sekali'] },
+  ],
+}
 
 const STATUS_STEPS = ['PENDING', 'COOKING', 'SERVED', 'COMPLETED'] as const
 const STATUS_LABEL: Record<string, string> = {
@@ -22,6 +37,7 @@ export default function CustomerMenu() {
 
   const [menu, setMenu] = useState<MenuCategory[]>([])
   const [activeCategory, setActiveCategory] = useState<string | null>(null)
+  const [tableNumber, setTableNumber] = useState<number | null>(null)
   const [customerName, setCustomerName] = useState(
     () => localStorage.getItem(`pos_customer_name_${tableId}`) ?? '',
   )
@@ -29,19 +45,23 @@ export default function CustomerMenu() {
   const [order, setOrder] = useState<Order | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [noteTarget, setNoteTarget] = useState<{ item: MenuCategory['items'][0] } | null>(null)
-  const [noteText, setNoteText] = useState('')
-
-  const cart = useCart(tableId)
+   const [noteTarget, setNoteTarget] = useState<{ item: MenuCategory['items'][0]; itemType: ItemType } | null>(null)
+   const [noteText, setNoteText] = useState('')
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
+ 
+   const cart = useCart(tableId)
 
   useEffect(() => {
     let cancelled = false
-    api
-      .getPublicMenu(tableId, token)
-      .then((data) => {
+    Promise.all([
+      api.getPublicMenu(tableId, token),
+      api.getTableSession(tableId, token).catch(() => null),
+    ])
+      .then(([data, sess]) => {
         if (cancelled) return
         setMenu(data)
         setActiveCategory(data[0]?.category_id ?? null)
+        if (sess) setTableNumber(sess.table_number)
       })
       .catch((e: Error) => !cancelled && setError(e.message))
       .finally(() => !cancelled && setLoading(false))
@@ -62,13 +82,31 @@ export default function CustomerMenu() {
 
   useSSE(api.sseUrl({ tableId, token }), (ev) => {
     if (!order) return
-    const data = ev.data as { order_id?: string; new_status?: string; grand_total?: number } | null
+    const data = ev.data as {
+      order_id?: string
+      new_status?: string
+      grand_total?: number
+      new_table_number?: number
+      cancellation_reason?: string
+    } | null
     if (!data || data.order_id !== order.id) return
     if (ev.event === 'order.status_changed' && data.new_status) {
       setOrder((prev) => (prev ? { ...prev, status: data.new_status! } : prev))
     }
     if (ev.event === 'order.completed') {
       setOrder((prev) => (prev ? { ...prev, status: 'COMPLETED' } : prev))
+    }
+    if (ev.event === 'order.cancelled') {
+      setOrder(null)
+      setPhase('menu')
+      window.alert(
+        data.cancellation_reason
+          ? `Pesanan dibatalkan kasir (${data.cancellation_reason}). Kembali ke menu.`
+          : 'Pesanan telah dibatalkan oleh kasir. Kembali ke menu.',
+      )
+    }
+    if (ev.event === 'order.table_moved' && data.new_table_number) {
+      setOrder((prev) => (prev ? { ...prev, table_number_snapshot: data.new_table_number! } : prev))
     }
   })
 
@@ -84,6 +122,9 @@ export default function CustomerMenu() {
     const cat = menu.find((c) => c.category_id === activeCategory)
     return cat ? cat.items : []
   }, [menu, activeCategory])
+  const [cartOpen, setCartOpen] = useState(false)
+  const activeItemType: ItemType =
+    (menu.find((c) => c.category_id === activeCategory)?.item_type as ItemType | undefined) ?? 'FOOD'
 
   const submitOrder = async () => {
     setError(null)
@@ -215,10 +256,11 @@ export default function CustomerMenu() {
     <div className="min-h-screen bg-stone-100 pb-28">
       <header className="bg-stone-900 text-white px-4 py-3 flex justify-between items-center">
         <div>
-          <p className="text-[10px] bg-amber-700 inline-block px-2 py-0.5 rounded font-bold">
-            MEJA SAH
+          <p className="text-[10px] text-stone-400 font-bold uppercase tracking-wider">Meja Anda</p>
+          <p className="text-3xl font-black font-mono-num leading-none">
+            {tableNumber ?? '-'}
           </p>
-          <h1 className="text-sm font-bold mt-1">Kafe Senja Kopi</h1>
+          <h1 className="text-xs font-semibold text-stone-300 mt-1">Kafe Senja Kopi</h1>
         </div>
         <span className="text-[10px] text-emerald-400 flex items-center gap-1">
           <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" aria-hidden="true"></span>
@@ -241,110 +283,265 @@ export default function CustomerMenu() {
           </button>
         ))}
       </nav>
+      {/* Input Nama Pemesan Permanen di Atas Menu */}
+      <div className="mx-3 mt-3 bg-white border border-stone-200 rounded-lg p-3 shadow-sm">
+        <div className="flex items-center justify-between mb-1">
+          <label htmlFor="cust-name" className="text-[11px] font-bold text-stone-700 uppercase">
+            Nama Pemesan <span className="text-rose-600">*</span>
+          </label>
+          <span className="text-[10px] text-stone-400">Untuk panggilan antrean</span>
+        </div>
+        <input
+          id="cust-name"
+          value={customerName}
+          onChange={(e) => setCustomerName(e.target.value)}
+          placeholder="Ketik nama Anda (misal: Bima)"
+          className="w-full border border-stone-300 rounded px-3 py-2 text-sm font-semibold text-stone-900 touch-target focus:border-amber-700 focus:outline-none"
+        />
+      </div>
 
       <div className="p-3 space-y-3">
         {visibleItems.length === 0 && (
           <p className="text-center text-stone-500 text-xs py-8">Belum ada menu di kategori ini.</p>
         )}
-        {visibleItems.map((item) => (
-          <div key={item.id} className="bg-white border border-stone-200 rounded-lg p-3 flex justify-between items-start gap-3">
-            <div className="flex-1">
-              <h3 className="text-sm font-bold text-stone-900">{item.name}</h3>
-              {item.description && <p className="text-xs text-stone-600 mt-0.5">{item.description}</p>}
-              <p className="text-sm font-bold font-mono-num text-amber-800 mt-1">
-                Rp {item.price.toLocaleString('id-ID')}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                setNoteTarget({ item })
-                setNoteText('')
-              }}
-              className="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target"
+        {visibleItems.map((item) => {
+          const isSoldOut = item.is_available === false || item.stock <= 0
+          return (
+            <div
+              key={item.id}
+              className={`border rounded-lg p-3 flex justify-between items-start gap-3 transition ${
+                isSoldOut
+                  ? 'bg-stone-50 border-stone-200 opacity-70'
+                  : 'bg-white border-stone-200'
+              }`}
             >
-              Tambah
-            </button>
-          </div>
-        ))}
+              <div className="flex-1">
+                <div className="flex items-center gap-2">
+                  <h3 className={`text-sm font-bold ${isSoldOut ? 'text-stone-500' : 'text-stone-900'}`}>
+                    {item.name}
+                  </h3>
+                  {isSoldOut && (
+                    <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-800 border border-rose-300">
+                      Habis
+                    </span>
+                  )}
+                </div>
+                {item.description && <p className="text-xs text-stone-500 mt-0.5">{item.description}</p>}
+                <p className={`text-sm font-bold font-mono-num mt-1 ${isSoldOut ? 'text-stone-400' : 'text-amber-800'}`}>
+                  Rp {item.price.toLocaleString('id-ID')}
+                </p>
+              </div>
+              {isSoldOut ? (
+                <span className="px-3 py-2 bg-stone-200 text-stone-500 text-xs font-bold rounded cursor-not-allowed select-none">
+                  Habis
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNoteTarget({ item, itemType: activeItemType })
+                    setNoteText('')
+                    setSelectedOptions({})
+                  }}
+                  className="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target shadow-sm"
+                >
+                  Tambah
+                </button>
+              )}
+            </div>
+          )
+        })}
       </div>
 
-      {/* Sticky cart bar */}
+      {/* Sticky cart bar: buka keranjang untuk ubah atau hapus item */}
       {cart.totalItems > 0 && (
-        <div className="fixed bottom-3 left-3 right-3 bg-white border-t border-stone-200 shadow-lg rounded-lg p-3 flex justify-between items-center">
-          <div>
-            <p className="text-[10px] text-stone-500 font-bold">{cart.totalItems} PESANAN</p>
-            <p className="text-sm font-bold font-mono-num">Rp {cart.subtotal.toLocaleString('id-ID')}</p>
-          </div>
+        <div className="fixed bottom-3 left-3 right-3 bg-white border border-stone-200 shadow-xl rounded-lg p-3 flex justify-between items-center z-20">
+          <button
+            type="button"
+            onClick={() => setCartOpen(true)}
+            className="text-left touch-target"
+            aria-label="Buka keranjang"
+          >
+            <p className="text-[10px] text-stone-500 font-bold">{cart.totalItems} ITEM TERPILIH (LIHAT)</p>
+            <p className="text-sm font-black font-mono-num text-amber-900">Rp {cart.subtotal.toLocaleString('id-ID')}</p>
+          </button>
           <button
             onClick={() => {
               if (!customerName.trim()) {
-                setError('Isi nama pemesan dulu ya.')
+                setError('Mohon isi kolom Nama Pemesan di bagian atas sebelum mengirim ke dapur.')
+                window.scrollTo({ top: 0, behavior: 'smooth' })
                 return
               }
               void submitOrder()
             }}
-            className="px-4 py-2.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target"
+            className="px-5 py-2.5 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target shadow"
           >
-            Kirim ke Dapur
+            Kirim ke Dapur ({tableNumber ? `Meja ${tableNumber}` : 'Meja Sah'})
           </button>
         </div>
       )}
 
-      {/* Customer name input (first time) */}
-      {cart.totalItems === 0 && (
-        <div className="fixed bottom-3 left-3 right-3 bg-white border border-stone-200 shadow-lg rounded-lg p-3">
-          <label htmlFor="cust-name" className="text-[10px] font-bold text-stone-600 block mb-1">
-            NAMA PEMESAN
-          </label>
-          <input
-            id="cust-name"
-            value={customerName}
-            onChange={(e) => setCustomerName(e.target.value)}
-            placeholder="Contoh: Rian"
-            className="w-full border border-stone-300 rounded px-3 py-2 text-sm touch-target"
-          />
-        </div>
-      )}
-
-      {/* Item notes modal */}
-      {noteTarget && (
-        <div className="fixed inset-0 bg-stone-900/50 flex items-end sm:items-center justify-center p-4" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-lg p-4 w-full max-w-sm">
-            <h3 className="text-sm font-bold">Catatan untuk {noteTarget.item.name}</h3>
-            <input
-              autoFocus
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setNoteTarget(null)
-                if (e.key === 'Enter') {
-                  cart.addItem(noteTarget.item, noteText)
-                  setNoteTarget(null)
-                }
-              }}
-              placeholder="Contoh: less ice, gula aren sedikit"
-              className="w-full border border-stone-300 rounded px-3 py-2 text-sm mt-3 touch-target"
-            />
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => setNoteTarget(null)}
-                className="flex-1 py-2.5 bg-stone-100 border border-stone-300 rounded text-sm font-semibold touch-target"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => {
-                  cart.addItem(noteTarget.item, noteText)
-                  setNoteTarget(null)
-                }}
-                className="flex-1 py-2.5 bg-amber-700 hover:bg-amber-800 text-white rounded text-sm font-bold touch-target"
-              >
-                Tambah ke Keranjang
-              </button>
+      {/* Bottom sheet keranjang: ubah qty dan hapus item sebelum dikirim */}
+      {cartOpen && (
+        <div className="fixed inset-0 bg-stone-900/50 flex items-end justify-center z-40" role="dialog" aria-modal="true" aria-label="Keranjang">
+          <div className="bg-white rounded-t-lg w-full max-w-md max-h-[80vh] overflow-y-auto p-4 shadow-xl">
+            <div className="flex justify-between items-center mb-3">
+              <h3 className="text-sm font-bold text-stone-900">Keranjang Anda</h3>
+              <button onClick={() => setCartOpen(false)} className="text-xs font-bold text-stone-600 touch-target px-2" aria-label="Tutup keranjang">Tutup</button>
+            </div>
+            {cart.lines.length === 0 && <p className="text-xs text-stone-500 py-6 text-center">Keranjang kosong.</p>}
+            <div className="divide-y divide-stone-100">
+              {cart.lines.map((line, idx) => (
+                <div key={`${line.product_id}-${idx}`} className="py-2.5 flex justify-between items-start gap-2">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-stone-900">{line.name}</p>
+                    {line.notes && <p className="text-[11px] italic text-stone-500">&quot;{line.notes}&quot;</p>}
+                    <p className="text-xs font-mono-num text-amber-800 mt-0.5">Rp {(line.price * line.quantity).toLocaleString('id-ID')}</p>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(idx, line.quantity - 1)}
+                      className="w-9 h-9 rounded bg-stone-100 border border-stone-300 font-bold touch-target"
+                      aria-label={`Kurangi ${line.name}`}
+                    >
+                      −
+                    </button>
+                    <span className="w-6 text-center text-sm font-bold font-mono-num">{line.quantity}</span>
+                    <button
+                      type="button"
+                      onClick={() => cart.setQty(idx, line.quantity + 1)}
+                      className="w-9 h-9 rounded bg-stone-100 border border-stone-300 font-bold touch-target"
+                      aria-label={`Tambah ${line.name}`}
+                    >
+                      +
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => cart.removeLine(idx)}
+                      className="ml-1 px-2 h-9 rounded bg-rose-50 border border-rose-200 text-rose-700 text-xs font-bold touch-target"
+                      aria-label={`Hapus ${line.name}`}
+                    >
+                      Hapus
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       )}
+
+      {/* Item notes modal */}
+      {/* Item notes modal with chips & custom input */}
+      {noteTarget && (() => {
+        const handleAdd = () => {
+          const chipNotes = Object.values(selectedOptions).filter(Boolean)
+          const manual = noteText.trim()
+          const combined = [...chipNotes, ...(manual ? [manual] : [])].join(', ')
+          cart.addItem(noteTarget.item, combined)
+          setNoteTarget(null)
+          setNoteText('')
+          setSelectedOptions({})
+        }
+
+        return (
+          <div className="fixed inset-0 bg-stone-900/50 flex items-end sm:items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
+              <h3 className="text-sm font-bold text-stone-900">Catatan Khusus: {noteTarget.item.name}</h3>
+              <p className="text-[11px] text-stone-500 mt-0.5">Pilih opsi cepat (maks. 1 per kelompok) atau ketik manual:</p>
+
+              {/* Preset sesuai jenis menu kategori item */}
+              <div className="mt-3 space-y-3">
+                {NOTE_CHIP_GROUPS[noteTarget.itemType].map((group) => {
+                  const activeChip = selectedOptions[group.label]
+                  return (
+                    <div key={group.label} className="space-y-1.5">
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                        {group.label} {activeChip && <span className="text-amber-800 font-semibold lowercase">({activeChip})</span>}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {group.chips.map((chip) => {
+                          const isSelected = activeChip === chip
+                          return (
+                            <button
+                              key={chip}
+                              type="button"
+                              onClick={() => {
+                                setSelectedOptions((prev) => {
+                                  const next = { ...prev }
+                                  if (next[group.label] === chip) {
+                                    delete next[group.label]
+                                  } else {
+                                    next[group.label] = chip
+                                  }
+                                  return next
+                                })
+                              }}
+                              className={`px-2.5 py-1 text-xs rounded border transition-colors font-medium touch-target ${
+                                isSelected
+                                  ? 'bg-amber-700 text-white border-amber-800 font-bold shadow-sm'
+                                  : 'bg-stone-100 hover:bg-stone-200 text-stone-800 border-stone-200'
+                              }`}
+                              aria-pressed={isSelected}
+                            >
+                              {chip}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Custom note text */}
+              <div className="mt-3">
+                <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-1">
+                  Catatan Tambahan (Ketik Manual)
+                </label>
+                <input
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setNoteTarget(null)
+                      setNoteText('')
+                      setSelectedOptions({})
+                    }
+                    if (e.key === 'Enter') {
+                      handleAdd()
+                    }
+                  }}
+                  placeholder="Misal: bungkus terpisah, sedotan kertas"
+                  className="w-full border border-stone-300 rounded px-3 py-2 text-sm touch-target focus:border-amber-700 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNoteTarget(null)
+                    setNoteText('')
+                    setSelectedOptions({})
+                  }}
+                  className="flex-1 py-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded text-xs font-semibold text-stone-700 touch-target"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdd}
+                  className="flex-1 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded text-xs font-bold touch-target shadow"
+                >
+                  Tambah ke Keranjang
+                </button>
+              </div>
+            </div>
+          </div>
+        )
+      })()}
 
       {/* Error toast */}
       {error && (

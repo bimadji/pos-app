@@ -1,16 +1,22 @@
 import uuid
+from typing import Literal
 from pydantic import BaseModel, Field
+
+
+ItemType = Literal["DRINK", "FOOD", "SNACK"]
 
 
 class CategoryCreate(BaseModel):
     name: str = Field(..., min_length=1, max_length=50)
     sort_order: int = Field(default=0, ge=0)
+    item_type: ItemType = "FOOD"
 
 
 class CategoryResponse(BaseModel):
     id: uuid.UUID
     name: str
     sort_order: int
+    item_type: str
 
     model_config = {"from_attributes": True}
 

@@ -11,6 +11,8 @@ from app.core.security import get_password_hash
 from app.core.tokens import generate_table_secret
 from app.models import Tenant, User, Table, Category, Product
 
+CATEGORY_TYPES = {"Kopi Signature": "DRINK", "Makanan Berat": "FOOD", "Cemilan": "SNACK"}
+
 MENU = [
     ("Kopi Signature", [
         ("Kopi Aren Senja", "Espresso ganda, susu segar, gula aren alami.", 22000, 45),
@@ -75,7 +77,12 @@ async def seed():
             )
 
         for idx, (cat_name, items) in enumerate(MENU):
-            cat = Category(tenant_id=tenant.id, name=cat_name, sort_order=idx)
+            cat = Category(
+                tenant_id=tenant.id,
+                name=cat_name,
+                sort_order=idx,
+                item_type=CATEGORY_TYPES.get(cat_name, "FOOD"),
+            )
             session.add(cat)
             await session.flush()
             for name, desc, price, stock in items:

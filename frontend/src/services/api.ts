@@ -6,12 +6,14 @@ export interface CategoryItem {
   description: string | null
   price: number
   stock: number
+  is_available?: boolean
   image_url: string | null
 }
 
 export interface MenuCategory {
   category_id: string
   category_name: string
+  item_type: 'DRINK' | 'FOOD' | 'SNACK'
   items: CategoryItem[]
 }
 
@@ -48,6 +50,40 @@ export interface TableInfo {
   qr_token: string
 }
 
+export interface CashierShift {
+  id: string
+  cashier_user_id: string
+  cashier_name?: string
+  starting_cash: number
+  expected_cash: number | null
+  actual_cash: number | null
+  cash_difference: number | null
+  notes: string | null
+  opened_at: string
+  closed_at: string | null
+  cash_sales?: number
+  qris_sales?: number
+  total_sales?: number
+  total_transactions?: number
+}
+
+export interface ShiftHistoryItem {
+  id: string
+  cashier_user_id: string
+  cashier_name: string
+  starting_cash: number
+  expected_cash: number | null
+  actual_cash: number | null
+  cash_difference: number | null
+  cash_sales: number
+  qris_sales: number
+  total_sales: number
+  total_transactions: number
+  notes: string | null
+  opened_at: string
+  closed_at: string | null
+  is_active: boolean
+}
 export interface StaffAuth {
   token: string
   user: { username: string; role: string }
@@ -107,6 +143,10 @@ export const api = {
   // --- Customer ---
   getPublicMenu: (tableId: string, token: string) =>
     request<MenuCategory[]>(`/api/v1/menu?table_id=${tableId}&token=${token}`),
+  getTableSession: (tableId: string, token: string) =>
+    request<{ table_id: string; table_number: number }>(
+      `/api/v1/session?table_id=${tableId}&token=${token}`,
+    ),
   submitOrder: (
     tableId: string,
     token: string,
@@ -131,6 +171,16 @@ export const api = {
   },
   withAuth: (token: string) => ({
     listTables: () => request<TableInfo[]>('/api/v1/tables', { headers: authHeaders(token) }),
+    createTable: (tableNumber: number) =>
+      request<TableInfo>(`/api/v1/tables?table_number=${tableNumber}`, {
+        method: 'POST',
+        headers: authHeaders(token),
+      }),
+    deleteTable: (tableId: string) =>
+      request<null>(`/api/v1/tables/${tableId}`, {
+        method: 'DELETE',
+        headers: authHeaders(token),
+      }),
     listActiveOrders: () =>
       request<Order[]>('/api/v1/orders/active', { headers: authHeaders(token) }),
     listProducts: () => request<Product[]>('/api/v1/products', { headers: authHeaders(token) }),
@@ -173,11 +223,14 @@ export const api = {
         method: 'DELETE',
         headers: authHeaders(token),
       }),
-    updateOrderStatus: (orderId: string, newStatus: string) =>
-      request<{ order_id: string; status: string }>(
-        `/api/v1/orders/${orderId}/status?new_status=${newStatus}`,
+    updateOrderStatus: (orderId: string, newStatus: string, roundNumber?: number) => {
+      const q = new URLSearchParams({ new_status: newStatus })
+      if (roundNumber !== undefined) q.set('round_number', String(roundNumber))
+      return request<{ order_id: string; status: string }>(
+        `/api/v1/orders/${orderId}/status?${q.toString()}`,
         { method: 'PATCH', headers: authHeaders(token) },
-      ),
+      )
+    },
     payOrder: (orderId: string, payload: { payment_method: string; amount_tendered: number }) =>
       request<{
         payment_id: string
@@ -202,12 +255,74 @@ export const api = {
           body: JSON.stringify({ cancellation_reason: reason }),
         },
       ),
+    moveTable: (orderId: string, newTableNumber: number) =>
+      request<{ order_id: string; table_number: number; message: string }>(
+        `/api/v1/orders/${orderId}/move-table`,
+        {
+          method: 'PATCH',
+          headers: authHeaders(token),
+          body: JSON.stringify({ new_table_number: newTableNumber }),
+        },
+      ),
+    getCurrentShift: () =>
+      request<CashierShift | null>('/api/v1/shifts/current', {
+        headers: authHeaders(token),
+      }),
+    openShift: (startingCash: number) =>
+      request<CashierShift>('/api/v1/shifts/open', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ starting_cash: startingCash }),
+      }),
+    closeShift: (actualCash: number, notes?: string) =>
+      request<CashierShift>('/api/v1/shifts/close', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ actual_cash: actualCash, notes }),
+      }),
+    getShiftsHistory: (limit = 30) =>
+      request<ShiftHistoryItem[]>(`/api/v1/shifts/history?limit=${limit}`, {
+        headers: authHeaders(token),
+      }),
+    getDailyMetrics: (params?: { start_date?: string; end_date?: string }) => {
+      const q = new URLSearchParams()
+      if (params?.start_date) q.set('start_date', params.start_date)
+      if (params?.end_date) q.set('end_date', params.end_date)
+      const qs = q.toString() ? `?${q.toString()}` : ''
+      return request<{
+        total_sales: number
+        completed_orders: number
+        cash_total: number
+        qris_total: number
+        top_products: Array<{ name: string; qty_sold: number; revenue: number }>
+        weekly_sales: Array<{ date: string; total: number; orders_count: number }>
+        monthly_sales: Array<{ month: string; total: number; orders_count: number }>
+      }>(`/api/v1/reports/daily${qs}`, { headers: authHeaders(token) })
+    },
+    downloadCsv: async () => {
+      const res = await fetch(`${API_BASE}/api/v1/reports/export-csv`, {
+        headers: authHeaders(token),
+      })
+      if (!res.ok) throw new Error('Gagal mengunduh berkas CSV.')
+      const blob = await res.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `laporan_penjualan_${new Date().toISOString().slice(0, 10)}.csv`
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+      window.URL.revokeObjectURL(url)
+    },
   }),
 
   // SSE stream URL builder (EventSource handles reconnect automatically)
-  sseUrl: (params: { tableId?: string; token?: string }) => {
+  sseUrl: (params: { tableId?: string; token?: string; staffToken?: string }) => {
     if (params.tableId && params.token) {
       return `${API_BASE}/api/v1/orders/stream?table_id=${params.tableId}&token=${params.token}`
+    }
+    if (params.staffToken) {
+      return `${API_BASE}/api/v1/orders/stream?staff_token=${params.staffToken}`
     }
     return `${API_BASE}/api/v1/orders/stream`
   },

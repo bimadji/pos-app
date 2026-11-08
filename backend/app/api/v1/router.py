@@ -11,6 +11,7 @@ from app.api.v1.endpoints import (
     payments,
     shifts,
     sse,
+    reports,
 )
 
 api_v1_router = APIRouter(prefix="/api/v1")
@@ -23,4 +24,5 @@ api_v1_router.include_router(orders.router, prefix="/orders", tags=["Orders"])
 api_v1_router.include_router(payments.router, prefix="/orders", tags=["Payments"])
 api_v1_router.include_router(shifts.router, prefix="/shifts", tags=["Cashier Shifts"])
 api_v1_router.include_router(sse.router, prefix="/orders", tags=["Realtime SSE"])
+api_v1_router.include_router(reports.router, prefix="/reports", tags=["Reports & Analytics"])
 api_v1_router.include_router(menu.router, tags=["Customer Menu"])

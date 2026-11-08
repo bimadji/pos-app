@@ -49,10 +49,17 @@ export function useCart(tableId: string) {
     setLines((prev) => prev.filter((_, i) => i !== index))
   }, [])
 
+  const setQty = useCallback((index: number, quantity: number) => {
+    setLines((prev) => {
+      if (quantity <= 0) return prev.filter((_, i) => i !== index)
+      return prev.map((l, i) => (i === index ? { ...l, quantity } : l))
+    })
+  }, [])
+
   const clear = useCallback(() => setLines([]), [])
 
   const totalItems = lines.reduce((sum, l) => sum + l.quantity, 0)
   const subtotal = lines.reduce((sum, l) => sum + l.price * l.quantity, 0)
 
-  return { lines, addItem, removeLine, clear, totalItems, subtotal }
+  return { lines, addItem, removeLine, setQty, clear, totalItems, subtotal }
 }
