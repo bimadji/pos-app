@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useSSE } from '../../hooks/useSSE'
 import { api, authStorage } from '../../services/api'
 import type { Category, Product, StaffAuth, TableInfo, ShiftHistoryItem } from '../../services/api'
 export default function AdminDashboard() {
@@ -43,7 +44,7 @@ export default function AdminDashboard() {
         client.listCategories(),
         client.listTables(),
         client.getDailyMetrics(filterParams),
-        client.getShiftsHistory(30).catch(() => []),
+        client.getShiftsHistory(30),
       ])
       setProducts(p)
       setCategories(c)
@@ -73,6 +74,25 @@ export default function AdminDashboard() {
     if (auth) void loadCatalog(auth)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [auth?.token])
+
+  // Realtime updates dari SSE (order update, shift opened, shift closed)
+  const sseUrl = auth?.token ? api.sseUrl({ staffToken: auth.token }) : null
+  useSSE(
+    sseUrl,
+    useCallback(
+      (ev) => {
+        if (
+          ev.event === 'shift.closed' ||
+          ev.event === 'shift.opened' ||
+          ev.event === 'order.completed' ||
+          ev.event === 'order.created'
+        ) {
+          if (auth) void loadCatalog(auth)
+        }
+      },
+      [auth, loadCatalog],
+    ),
+  )
 
   const toggleProduct = async (productId: string) => {
     if (!auth) return

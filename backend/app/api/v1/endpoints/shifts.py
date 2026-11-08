@@ -54,6 +54,17 @@ async def open_shift(
     db.add(shift)
     await db.commit()
     await db.refresh(shift)
+
+    from app.services.sse_service import broadcaster
+    broadcaster.broadcast(
+        tenant_id=tenant_id,
+        event="shift.opened",
+        data={
+            "shift_id": str(shift.id),
+            "cashier_user_id": str(shift.cashier_user_id),
+            "starting_cash": float(shift.starting_cash),
+        },
+    )
     return Response(success=True, data=ShiftResponse.model_validate(shift))
 
 
@@ -167,6 +178,18 @@ async def close_shift(
     await db.commit()
     await db.refresh(shift)
 
+    from app.services.sse_service import broadcaster
+    broadcaster.broadcast(
+        tenant_id=tenant_id,
+        event="shift.closed",
+        data={
+            "shift_id": str(shift.id),
+            "cashier_user_id": str(shift.cashier_user_id),
+            "actual_cash": float(shift.actual_cash) if shift.actual_cash else 0,
+            "cash_difference": float(shift.cash_difference) if shift.cash_difference else 0,
+        },
+    )
+
     return Response(
         success=True,
         data=ShiftResponse.model_validate(shift),
@@ -176,14 +199,14 @@ async def close_shift(
 @router.get("/history", response_model=Response)
 async def get_shifts_history(
     tenant_id: Annotated[uuid.UUID, Depends(enforce_tenant_id)],
-    _: Annotated[User, Depends(require_admin)],
+    _: Annotated[User, Depends(get_current_user)],
     db: Annotated[AsyncSession, Depends(get_db)],
     limit: int = 30,
 ):
-    """Admin audit endpoint to view historical cashier shifts and sales performance."""
+    """Staff/Admin audit endpoint to view historical cashier shifts and sales performance."""
     stmt = (
-        select(CashierShift, User.full_name)
-        .join(User, CashierShift.cashier_user_id == User.id)
+        select(CashierShift, User.full_name, User.username)
+        .outerjoin(User, CashierShift.cashier_user_id == User.id)
         .where(CashierShift.tenant_id == tenant_id)
         .order_by(CashierShift.opened_at.desc())
         .limit(limit)
@@ -191,7 +214,8 @@ async def get_shifts_history(
     rows = (await db.execute(stmt)).all()
 
     items: list[ShiftHistoryItem] = []
-    for shift, cashier_name in rows:
+    for shift, full_name, username in rows:
+        cashier_label = full_name or username or "Kasir"
         # Agregasikan penjualan shift ini
         time_filter = [
             Payment.tenant_id == tenant_id,
@@ -224,7 +248,7 @@ async def get_shifts_history(
             ShiftHistoryItem(
                 id=shift.id,
                 cashier_user_id=shift.cashier_user_id,
-                cashier_name=cashier_name or "Kasir",
+                cashier_name=cashier_label,
                 starting_cash=float(shift.starting_cash),
                 expected_cash=float(shift.expected_cash) if shift.expected_cash is not None else (float(shift.starting_cash) + cash_sales),
                 actual_cash=float(shift.actual_cash) if shift.actual_cash is not None else None,

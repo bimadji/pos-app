@@ -90,7 +90,7 @@ export default function CashierDashboard() {
 
   useSSE(auth ? api.sseUrl({ staffToken: auth.token }) : null, (ev) => {
     if (ev.event === 'connected' || ev.event === 'ping') return
-    if (ev.event.startsWith('order.') || ev.event.startsWith('table.')) {
+    if (ev.event.startsWith('order.') || ev.event.startsWith('table.') || ev.event.startsWith('shift.')) {
       void refreshData()
     }
   })
@@ -187,6 +187,7 @@ export default function CashierDashboard() {
       setCloseActualCashInput('')
       setShiftNotesInput('')
       setError(null)
+      await refreshData()
       window.alert('Shift kasir berhasil ditutup dan direkonsiliasi.')
     } catch (e) {
       setError((e as Error).message)
