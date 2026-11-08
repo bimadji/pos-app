@@ -45,10 +45,11 @@ export default function CustomerMenu() {
   const [order, setOrder] = useState<Order | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [loading, setLoading] = useState(true)
-  const [noteTarget, setNoteTarget] = useState<{ item: MenuCategory['items'][0]; itemType: ItemType } | null>(null)
-  const [noteText, setNoteText] = useState('')
-
-  const cart = useCart(tableId)
+   const [noteTarget, setNoteTarget] = useState<{ item: MenuCategory['items'][0]; itemType: ItemType } | null>(null)
+   const [noteText, setNoteText] = useState('')
+  const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({})
+ 
+   const cart = useCart(tableId)
 
   useEffect(() => {
     let cancelled = false
@@ -298,6 +299,7 @@ export default function CustomerMenu() {
               onClick={() => {
                 setNoteTarget({ item, itemType: activeItemType })
                 setNoteText('')
+                setSelectedOptions({})
               }}
               className="px-3 py-2 bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold rounded touch-target"
             >
@@ -388,67 +390,114 @@ export default function CustomerMenu() {
 
       {/* Item notes modal */}
       {/* Item notes modal with chips & custom input */}
-      {noteTarget && (
-        <div className="fixed inset-0 bg-stone-900/50 flex items-end sm:items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
-          <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
-            <h3 className="text-sm font-bold text-stone-900">Catatan Khusus: {noteTarget.item.name}</h3>
-            <p className="text-[11px] text-stone-500 mt-0.5">Pilih opsi cepat atau ketik sendiri di bawah:</p>
+      {noteTarget && (() => {
+        const handleAdd = () => {
+          const chipNotes = Object.values(selectedOptions).filter(Boolean)
+          const manual = noteText.trim()
+          const combined = [...chipNotes, ...(manual ? [manual] : [])].join(', ')
+          cart.addItem(noteTarget.item, combined)
+          setNoteTarget(null)
+          setNoteText('')
+          setSelectedOptions({})
+        }
 
-            {/* Preset sesuai jenis menu kategori item */}
-            <div className="mt-3 space-y-2">
-              {NOTE_CHIP_GROUPS[noteTarget.itemType].map((group) => (
-                <div key={group.label} className="space-y-1.5">
-                  <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider pt-1">{group.label}</p>
-                  <div className="flex flex-wrap gap-1.5">
-                    {group.chips.map((chip) => (
-                      <button
-                        key={chip}
-                        type="button"
-                        onClick={() => setNoteText((prev) => (prev ? `${prev}, ${chip}` : chip))}
-                        className="px-2.5 py-1 text-xs bg-stone-100 hover:bg-stone-200 text-stone-800 rounded border border-stone-200 font-medium"
-                      >
-                        + {chip}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
+        return (
+          <div className="fixed inset-0 bg-stone-900/50 flex items-end sm:items-center justify-center p-4 z-50" role="dialog" aria-modal="true">
+            <div className="bg-white rounded-lg p-4 w-full max-w-sm shadow-xl">
+              <h3 className="text-sm font-bold text-stone-900">Catatan Khusus: {noteTarget.item.name}</h3>
+              <p className="text-[11px] text-stone-500 mt-0.5">Pilih opsi cepat (maks. 1 per kelompok) atau ketik manual:</p>
 
-            {/* Custom note text */}
-            <input
-              value={noteText}
-              onChange={(e) => setNoteText(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === 'Escape') setNoteTarget(null)
-                if (e.key === 'Enter') {
-                  cart.addItem(noteTarget.item, noteText)
-                  setNoteTarget(null)
-                }
-              }}
-              placeholder="Catatan manual (misal: bungkus terpisah)"
-              className="w-full border border-stone-300 rounded px-3 py-2 text-sm mt-3 touch-target"
-            />
-            <div className="flex gap-2 mt-3">
-              <button
-                onClick={() => setNoteTarget(null)}
-                className="flex-1 py-2 bg-stone-100 border border-stone-300 rounded text-xs font-semibold text-stone-700 touch-target"
-              >
-                Batal
-              </button>
-              <button
-                onClick={() => {
-                  cart.addItem(noteTarget.item, noteText)
-                  setNoteTarget(null)
-                }}
-                className="flex-1 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded text-xs font-bold touch-target shadow"
-              >
-                Tambah ke Keranjang
-              </button>
+              {/* Preset sesuai jenis menu kategori item */}
+              <div className="mt-3 space-y-3">
+                {NOTE_CHIP_GROUPS[noteTarget.itemType].map((group) => {
+                  const activeChip = selectedOptions[group.label]
+                  return (
+                    <div key={group.label} className="space-y-1.5">
+                      <p className="text-[10px] font-bold text-stone-400 uppercase tracking-wider">
+                        {group.label} {activeChip && <span className="text-amber-800 font-semibold lowercase">({activeChip})</span>}
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {group.chips.map((chip) => {
+                          const isSelected = activeChip === chip
+                          return (
+                            <button
+                              key={chip}
+                              type="button"
+                              onClick={() => {
+                                setSelectedOptions((prev) => {
+                                  const next = { ...prev }
+                                  if (next[group.label] === chip) {
+                                    delete next[group.label]
+                                  } else {
+                                    next[group.label] = chip
+                                  }
+                                  return next
+                                })
+                              }}
+                              className={`px-2.5 py-1 text-xs rounded border transition-colors font-medium touch-target ${
+                                isSelected
+                                  ? 'bg-amber-700 text-white border-amber-800 font-bold shadow-sm'
+                                  : 'bg-stone-100 hover:bg-stone-200 text-stone-800 border-stone-200'
+                              }`}
+                              aria-pressed={isSelected}
+                            >
+                              {chip}
+                            </button>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+
+              {/* Custom note text */}
+              <div className="mt-3">
+                <label className="text-[10px] font-bold text-stone-400 uppercase tracking-wider block mb-1">
+                  Catatan Tambahan (Ketik Manual)
+                </label>
+                <input
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Escape') {
+                      setNoteTarget(null)
+                      setNoteText('')
+                      setSelectedOptions({})
+                    }
+                    if (e.key === 'Enter') {
+                      handleAdd()
+                    }
+                  }}
+                  placeholder="Misal: bungkus terpisah, sedotan kertas"
+                  className="w-full border border-stone-300 rounded px-3 py-2 text-sm touch-target focus:border-amber-700 focus:outline-none"
+                />
+              </div>
+
+              <div className="flex gap-2 mt-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setNoteTarget(null)
+                    setNoteText('')
+                    setSelectedOptions({})
+                  }}
+                  className="flex-1 py-2 bg-stone-100 hover:bg-stone-200 border border-stone-300 rounded text-xs font-semibold text-stone-700 touch-target"
+                >
+                  Batal
+                </button>
+                <button
+                  type="button"
+                  onClick={handleAdd}
+                  className="flex-1 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded text-xs font-bold touch-target shadow"
+                >
+                  Tambah ke Keranjang
+                </button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )
+      })()}
 
       {/* Error toast */}
       {error && (
