@@ -1,0 +1,152 @@
+<svg viewBox="0 0 1200 480" width="100%" height="auto" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <!-- Rich Espresso / Ochre Background -->
+    <linearGradient id="kraftBg" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#191512" />
+      <stop offset="50%" stop-color="#241e19" />
+      <stop offset="100%" stop-color="#14110e" />
+    </linearGradient>
+
+    <!-- Card Glow -->
+    <filter id="cardShadow" x="-10%" y="-10%" width="125%" height="130%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#000000" flood-opacity="0.6" />
+    </filter>
+  </defs>
+
+  <rect width="1200" height="480" fill="url(#kraftBg)" />
+
+  <!-- Outer Double Border Frame (Artisan Certificate Style) -->
+  <rect x="20" y="20" width="1160" height="440" fill="none" stroke="#78350f" stroke-width="2" />
+  <rect x="28" y="28" width="1144" height="424" fill="none" stroke="#443527" stroke-width="1" />
+
+  <!-- TOP HEADER ROW -->
+  <g transform="translate(60, 55)">
+    <!-- Brand Title -->
+    <g transform="translate(0, 0)">
+      <rect width="36" height="36" rx="4" fill="#b45309" />
+      <text x="18" y="24" fill="#fff" font-family="'Courier New', monospace" font-size="18" font-weight="900" text-anchor="middle">KS</text>
+      <text x="50" y="16" fill="#fafaf9" font-family="-apple-system, sans-serif" font-size="18" font-weight="900" letter-spacing="-0.5">KAFE DINE-IN WEB POS</text>
+      <text x="50" y="32" fill="#a8a29e" font-family="-apple-system, sans-serif" font-size="11">Production Greenfield Rebuild • Zero Install • Rp 0 Hosting</text>
+    </g>
+
+    <!-- Right Badges -->
+    <g transform="translate(760, 4)">
+      <rect width="105" height="28" rx="4" fill="#1c1917" stroke="#78350f" />
+      <text x="52" y="18" fill="#f59e0b" font-family="'Courier New', monospace" font-size="11" font-weight="700" text-anchor="middle">FASTAPI 0.115</text>
+
+      <rect x="115" y="0" width="95" height="28" rx="4" fill="#1c1917" stroke="#78350f" />
+      <text x="162" y="18" fill="#38bdf8" font-family="'Courier New', monospace" font-size="11" font-weight="700" text-anchor="middle">POSTGRES 15</text>
+
+      <rect x="220" y="0" width="95" height="28" rx="4" fill="#1c1917" stroke="#78350f" />
+      <text x="267" y="18" fill="#34d399" font-family="'Courier New', monospace" font-size="11" font-weight="700" text-anchor="middle">REACT 18 VITE</text>
+    </g>
+  </g>
+
+  <!-- MIDDLE SECTION: 3 BENTO CARDS (Clear Workflow) -->
+  <g transform="translate(60, 120)">
+    <!-- Card 1: Pelanggan Meja (Zero Friction) -->
+    <g transform="translate(0, 0)" filter="url(#cardShadow)">
+      <rect width="340" height="280" rx="10" fill="#1c1917" stroke="#443527" stroke-width="1.5" />
+      <rect x="0" y="0" width="340" height="6" rx="3" fill="#d97706" />
+
+      <g transform="translate(24, 30)" font-family="-apple-system, sans-serif">
+        <text x="0" y="0" fill="#f59e0b" font-family="'Courier New', monospace" font-size="11" font-weight="700" letter-spacing="1">TAHAP 01 / SCAN &amp; PESAN</text>
+        <text x="0" y="28" fill="#fafaf9" font-size="20" font-weight="800">Pelanggan Meja</text>
+        <text x="0" y="50" fill="#a8a29e" font-size="12" line-height="1.4">Zero-install di browser HP via signed QR meja.</text>
+
+        <!-- Feature List Inside Card -->
+        <g transform="translate(0, 76)" font-size="11">
+          <!-- Point 1 -->
+          <circle cx="4" cy="4" r="3" fill="#d97706" />
+          <text x="16" y="8" fill="#e7e5e4" font-weight="600">HMAC-SHA256 Table Token</text>
+          <text x="16" y="22" fill="#78716c" font-size="10">Akses resmi anti-spoofing tanpa login</text>
+
+          <!-- Point 2 -->
+          <circle cx="4" cy="44" r="3" fill="#d97706" />
+          <text x="16" y="48" fill="#e7e5e4" font-weight="600">Katalog Menu &amp; Label Habis</text>
+          <text x="16" y="62" fill="#78716c" font-size="10">Menu habis tetap tampil dengan badge merah</text>
+
+          <!-- Point 3 -->
+          <circle cx="4" cy="84" r="3" fill="#d97706" />
+          <text x="16" y="88" fill="#e7e5e4" font-weight="600">Pemesanan Multi-Round</text>
+          <text x="16" y="102" fill="#78716c" font-size="10">Pesan ronde tambahan tanpa menimpa bon</text>
+
+          <!-- Point 4 -->
+          <circle cx="4" cy="124" r="3" fill="#d97706" />
+          <text x="16" y="128" fill="#e7e5e4" font-weight="600">Auto-Sync Meja &amp; Void</text>
+          <text x="16" y="142" fill="#78716c" font-size="10">Pindah meja &amp; batal pesanan otomatis sinkron</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Card 2: Kasir & Antrean Masak Dapur (Tactical Ops) -->
+    <g transform="translate(370, 0)" filter="url(#cardShadow)">
+      <rect width="340" height="280" rx="10" fill="#1c1917" stroke="#b45309" stroke-width="2" />
+      <rect x="0" y="0" width="340" height="6" rx="3" fill="#f59e0b" />
+
+      <g transform="translate(24, 30)" font-family="-apple-system, sans-serif">
+        <text x="0" y="0" fill="#fde68a" font-family="'Courier New', monospace" font-size="11" font-weight="700" letter-spacing="1">TAHAP 02 / KENDALI &amp; MASAK</text>
+        <text x="0" y="28" fill="#fafaf9" font-size="20" font-weight="800">Kasir &amp; Dapur</text>
+        <text x="0" y="50" fill="#d6d3d1" font-size="12">Denah meja, stream babak, &amp; cetak thermal.</text>
+
+        <!-- Feature List Inside Card -->
+        <g transform="translate(0, 76)" font-size="11">
+          <!-- Point 1 -->
+          <circle cx="4" cy="4" r="3" fill="#f59e0b" />
+          <text x="16" y="8" fill="#e7e5e4" font-weight="600">Antrean Dapur Tiket Per Babak</text>
+          <text x="16" y="22" fill="#a8a29e" font-size="10">Status mandiri: Babak 1 Masak, Babak 2 Masuk</text>
+
+          <!-- Point 2 -->
+          <circle cx="4" cy="44" r="3" fill="#f59e0b" />
+          <text x="16" y="48" fill="#e7e5e4" font-weight="600">Uang Laci &amp; Rekonsiliasi Kas</text>
+          <text x="16" y="62" fill="#a8a29e" font-size="10">Buka shift modal &amp; cek fisik laci vs sistem</text>
+
+          <!-- Point 3 -->
+          <circle cx="4" cy="84" r="3" fill="#f59e0b" />
+          <text x="16" y="88" fill="#e7e5e4" font-weight="600">Pelunasan Tunai &amp; STATIC_QRIS</text>
+          <text x="16" y="102" fill="#a8a29e" font-size="10">Proteksi Idempotency-Key anti-bayar dobel</text>
+
+          <!-- Point 4 -->
+          <circle cx="4" cy="124" r="3" fill="#f59e0b" />
+          <text x="16" y="128" fill="#e7e5e4" font-weight="600">Struk Thermal 58mm Rapat</text>
+          <text x="16" y="142" fill="#a8a29e" font-size="10">Tanpa sisa kertas &amp; tanpa page-break putus</text>
+        </g>
+      </g>
+    </g>
+
+    <!-- Card 3: Pemilik Kafe & Keuangan (Strategic Audit) -->
+    <g transform="translate(740, 0)" filter="url(#cardShadow)">
+      <rect width="340" height="280" rx="10" fill="#1c1917" stroke="#443527" stroke-width="1.5" />
+      <rect x="0" y="0" width="340" height="6" rx="3" fill="#38bdf8" />
+
+      <g transform="translate(24, 30)" font-family="-apple-system, sans-serif">
+        <text x="0" y="0" fill="#38bdf8" font-family="'Courier New', monospace" font-size="11" font-weight="700" letter-spacing="1">TAHAP 03 / AUDIT &amp; BISNIS</text>
+        <text x="0" y="28" fill="#fafaf9" font-size="20" font-weight="800">Pemilik &amp; Admin</text>
+        <text x="0" y="50" fill="#a8a29e" font-size="12">Laporan omzet, riwayat shift, &amp; ekspor CSV.</text>
+
+        <!-- Feature List Inside Card -->
+        <g transform="translate(0, 76)" font-size="11">
+          <!-- Point 1 -->
+          <circle cx="4" cy="4" r="3" fill="#38bdf8" />
+          <text x="16" y="8" fill="#e7e5e4" font-weight="600">4 Indikator Finansial Terpusat</text>
+          <text x="16" y="22" fill="#78716c" font-size="10">Omzet, Tunai, QRIS, &amp; Stok Menipis di atas</text>
+
+          <!-- Point 2 -->
+          <circle cx="4" cy="44" r="3" fill="#38bdf8" />
+          <text x="16" y="48" fill="#e7e5e4" font-weight="600">Tren 7 Hari &amp; Rekap 12 Bulan</text>
+          <text x="16" y="62" fill="#78716c" font-size="10">Grafik penjualan &amp; ranking menu terlaris</text>
+
+          <!-- Point 3 -->
+          <circle cx="4" cy="84" r="3" fill="#38bdf8" />
+          <text x="16" y="88" fill="#e7e5e4" font-weight="600">Audit Riwayat Shift Kasir</text>
+          <text x="16" y="102" fill="#78716c" font-size="10">Pantau selisih uang laci kasir secara realtime</text>
+
+          <!-- Point 4 -->
+          <circle cx="4" cy="124" r="3" fill="#38bdf8" />
+          <text x="16" y="128" fill="#e7e5e4" font-weight="600">Ekspor CSV &amp; Cetak QR A4</text>
+          <text x="16" y="142" fill="#78716c" font-size="10">Streaming pembukuan &amp; stiker meja kafe</text>
+        </g>
+      </g>
+    </g>
+  </g>
+</svg>
