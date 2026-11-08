@@ -43,11 +43,21 @@ select:focus-visible {
     color: black !important;
     overflow: visible !important;
   }
-
-  /* Sembunyikan semua konten aplikasi root */
-  body.printing-receipt #root {
+  /* Sembunyikan semua elemen UI kecuali modal struk */
+  .no-print,
+  body.printing-receipt header,
+  body.printing-receipt main,
+  body.printing-receipt nav,
+  body.printing-receipt aside {
     display: none !important;
-    visibility: hidden !important;
+  }
+
+  body.printing-receipt #root {
+    display: block !important;
+    visibility: visible !important;
+    width: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
   }
 
   /* Tampilkan hanya wadah struk, letakkan di pojok kiri atas kertas */

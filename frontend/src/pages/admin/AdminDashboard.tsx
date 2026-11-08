@@ -272,14 +272,6 @@ export default function AdminDashboard() {
           {/* Navigation & Mode Tabs */}
           <nav aria-label="Portal Peran" className="flex items-center gap-1 bg-stone-950 p-1 rounded-lg border border-stone-800 text-xs">
             <button
-              onClick={() => {
-                if (tables[0]) window.open(`/t/${tables[0].id}`, '_blank')
-              }}
-              className="px-3 py-1.5 rounded font-medium text-stone-300 hover:text-white transition touch-target"
-            >
-              Customer (HP)
-            </button>
-            <button
               onClick={() => navigate('/cashier')}
               className="px-3 py-1.5 rounded font-medium text-stone-300 hover:text-white transition touch-target"
             >
@@ -477,6 +469,79 @@ export default function AdminDashboard() {
             </div>
           </div>
         </div>
+        {/* 6. Top Produk & Tren Penjualan */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Tren 7 Hari */}
+          <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm">
+            <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
+              Tren Penjualan 7 Hari Terakhir
+            </h3>
+            {(!metrics?.weekly_sales || metrics.weekly_sales.length === 0) ? (
+              <p className="text-xs text-stone-400 py-6 text-center">Belum ada transaksi completed minggu ini.</p>
+            ) : (
+              <div className="space-y-2">
+                {metrics.weekly_sales.map((w) => (
+                  <div key={w.date} className="flex justify-between items-center text-xs py-1 border-b border-stone-100">
+                    <span className="font-mono-num text-stone-700">{w.date} ({w.orders_count} bon)</span>
+                    <span className="font-mono-num font-bold text-amber-900">
+                      Rp {w.total.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Menu Terlaris */}
+          <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm">
+            <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
+              Menu Paling Sering Dipesan
+            </h3>
+            {(!metrics?.top_products || metrics.top_products.length === 0) ? (
+              <p className="text-xs text-stone-400 py-6 text-center">Belum ada data penjualan menu.</p>
+            ) : (
+              <div className="space-y-2">
+                {metrics.top_products.map((item, idx) => (
+                  <div key={item.name} className="flex justify-between items-center text-xs py-1 border-b border-stone-100">
+                    <div className="flex items-center gap-2">
+                      <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-900 font-bold flex items-center justify-center text-[10px]">
+                        {idx + 1}
+                      </span>
+                      <span className="font-semibold text-stone-800">{item.name}</span>
+                    </div>
+                    <div className="text-right">
+                      <span className="font-semibold text-stone-700">{item.qty_sold} terjual</span>
+                      <span className="font-mono-num text-stone-500 ml-2">Rp {item.revenue.toLocaleString('id-ID')}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* 7. Rekapitulasi Bulanan */}
+        <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm">
+          <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
+            Rekapitulasi Penjualan Bulanan (12 Bulan Terakhir)
+          </h3>
+          {(!metrics?.monthly_sales || metrics.monthly_sales.length === 0) ? (
+            <p className="text-xs text-stone-400 py-4 text-center">Belum ada rekap bulanan.</p>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
+              {metrics.monthly_sales.map((m) => (
+                <div key={m.month} className="border border-stone-200 rounded p-2.5 bg-stone-50 text-center">
+                  <p className="text-[11px] font-bold text-stone-700 font-mono-num">{m.month}</p>
+                  <p className="text-xs font-black font-mono-num text-amber-900 mt-1">
+                    Rp {m.total.toLocaleString('id-ID')}
+                  </p>
+                  <p className="text-[10px] text-stone-500 mt-0.5">{m.orders_count} transaksi</p>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
 
         {/* 5. Inventaris & Saklar Ketersediaan Menu (Sesuai Mockup V3 baris 525-578) */}
         <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm space-y-3">
@@ -633,79 +698,6 @@ export default function AdminDashboard() {
               </tbody>
             </table>
           </div>
-        </div>
-
-        {/* 6. Top Produk & Tren Penjualan */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Tren 7 Hari */}
-          <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm">
-            <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
-              Tren Penjualan 7 Hari Terakhir
-            </h3>
-            {(!metrics?.weekly_sales || metrics.weekly_sales.length === 0) ? (
-              <p className="text-xs text-stone-400 py-6 text-center">Belum ada transaksi completed minggu ini.</p>
-            ) : (
-              <div className="space-y-2">
-                {metrics.weekly_sales.map((w) => (
-                  <div key={w.date} className="flex justify-between items-center text-xs py-1 border-b border-stone-100">
-                    <span className="font-mono-num text-stone-700">{w.date} ({w.orders_count} bon)</span>
-                    <span className="font-mono-num font-bold text-amber-900">
-                      Rp {w.total.toLocaleString('id-ID')}
-                    </span>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* Menu Terlaris */}
-          <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm">
-            <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
-              Menu Paling Sering Dipesan
-            </h3>
-            {(!metrics?.top_products || metrics.top_products.length === 0) ? (
-              <p className="text-xs text-stone-400 py-6 text-center">Belum ada data penjualan menu.</p>
-            ) : (
-              <div className="space-y-2">
-                {metrics.top_products.map((item, idx) => (
-                  <div key={item.name} className="flex justify-between items-center text-xs py-1 border-b border-stone-100">
-                    <div className="flex items-center gap-2">
-                      <span className="w-5 h-5 rounded-full bg-amber-100 text-amber-900 font-bold flex items-center justify-center text-[10px]">
-                        {idx + 1}
-                      </span>
-                      <span className="font-semibold text-stone-800">{item.name}</span>
-                    </div>
-                    <div className="text-right">
-                      <span className="font-semibold text-stone-700">{item.qty_sold} terjual</span>
-                      <span className="font-mono-num text-stone-500 ml-2">Rp {item.revenue.toLocaleString('id-ID')}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* 7. Rekapitulasi Bulanan */}
-        <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm">
-          <h3 className="text-xs font-bold text-stone-800 uppercase tracking-wider mb-2">
-            Rekapitulasi Penjualan Bulanan (12 Bulan Terakhir)
-          </h3>
-          {(!metrics?.monthly_sales || metrics.monthly_sales.length === 0) ? (
-            <p className="text-xs text-stone-400 py-4 text-center">Belum ada rekap bulanan.</p>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-4 md:grid-cols-6 gap-2">
-              {metrics.monthly_sales.map((m) => (
-                <div key={m.month} className="border border-stone-200 rounded p-2.5 bg-stone-50 text-center">
-                  <p className="text-[11px] font-bold text-stone-700 font-mono-num">{m.month}</p>
-                  <p className="text-xs font-black font-mono-num text-amber-900 mt-1">
-                    Rp {m.total.toLocaleString('id-ID')}
-                  </p>
-                  <p className="text-[10px] text-stone-500 mt-0.5">{m.orders_count} transaksi</p>
-                </div>
-              ))}
-            </div>
-          )}
         </div>
 
         {/* 8. Kelola Meja Kafe */}

@@ -49,6 +49,18 @@ export interface TableInfo {
   qr_token: string
 }
 
+export interface CashierShift {
+  id: string
+  cashier_user_id: string
+  starting_cash: number
+  expected_cash: number | null
+  actual_cash: number | null
+  cash_difference: number | null
+  notes: string | null
+  opened_at: string
+  closed_at: string | null
+}
+
 export interface StaffAuth {
   token: string
   user: { username: string; role: string }
@@ -226,6 +238,22 @@ export const api = {
           body: JSON.stringify({ new_table_number: newTableNumber }),
         },
       ),
+    getCurrentShift: () =>
+      request<CashierShift | null>('/api/v1/shifts/current', {
+        headers: authHeaders(token),
+      }),
+    openShift: (startingCash: number) =>
+      request<CashierShift>('/api/v1/shifts/open', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ starting_cash: startingCash }),
+      }),
+    closeShift: (actualCash: number, notes?: string) =>
+      request<CashierShift>('/api/v1/shifts/close', {
+        method: 'POST',
+        headers: authHeaders(token),
+        body: JSON.stringify({ actual_cash: actualCash, notes }),
+      }),
     getDailyMetrics: (params?: { start_date?: string; end_date?: string }) => {
       const q = new URLSearchParams()
       if (params?.start_date) q.set('start_date', params.start_date)

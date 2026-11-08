@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { api, authStorage } from '../../services/api'
-import type { Order, TableInfo } from '../../services/api'
+import type { CashierShift, Order, TableInfo } from '../../services/api'
 import { useSSE } from '../../hooks/useSSE'
 
 const STATUS_LABEL: Record<string, string> = {
@@ -38,19 +38,31 @@ export default function CashierDashboard() {
     paid_at: string
   } | null>(null)
 
+  // Shift & Uang Laci
+  const [currentShift, setCurrentShift] = useState<CashierShift | null>(null)
+  const [shiftModalOpen, setShiftModalOpen] = useState(false)
+  const [startingCashInput, setStartingCashInput] = useState('200000')
+  const [closeActualCashInput, setCloseActualCashInput] = useState('')
+  const [shiftNotesInput, setShiftNotesInput] = useState('')
+
   // Modal Pindah Meja
   const [moveModalOpen, setMoveModalOpen] = useState(false)
   const [targetTableNumber, setTargetTableNumber] = useState<number | null>(null)
 
   usePrintReceiptMode(lastReceipt !== null && paymentInfo !== null)
 
-  const refreshOrders = useCallback(async () => {
+  const refreshData = useCallback(async () => {
     if (!auth) return
     try {
       const client = api.withAuth(auth.token)
-      const [t, o] = await Promise.all([client.listTables(), client.listActiveOrders()])
+      const [t, o, s] = await Promise.all([
+        client.listTables(),
+        client.listActiveOrders(),
+        client.getCurrentShift().catch(() => null),
+      ])
       setTables(t)
       setOrders(o)
+      setCurrentShift(s)
     } catch (e) {
       setError((e as Error).message)
     }
@@ -62,10 +74,15 @@ export default function CashierDashboard() {
       return
     }
     const client = api.withAuth(auth.token)
-    Promise.all([client.listTables(), client.listActiveOrders()])
-      .then(([t, o]) => {
+    Promise.all([
+      client.listTables(),
+      client.listActiveOrders(),
+      client.getCurrentShift().catch(() => null),
+    ])
+      .then(([t, o, s]) => {
         setTables(t)
         setOrders(o)
+        setCurrentShift(s)
       })
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false))
@@ -74,25 +91,28 @@ export default function CashierDashboard() {
   useSSE(auth ? api.sseUrl({ staffToken: auth.token }) : null, (ev) => {
     if (ev.event === 'connected' || ev.event === 'ping') return
     if (ev.event.startsWith('order.') || ev.event.startsWith('table.')) {
-      void refreshOrders()
+      void refreshData()
     }
   })
 
   const selected = orders.find((o) => o.id === selectedOrderId) ?? null
 
-  // Total kas hari ini (estimasi dari order completed / info kas)
-  const totalCashEstimate = orders
+  // Total penjualan tunai
+  const totalCashSales = orders
     .filter((o) => o.status === 'COMPLETED')
     .reduce((sum, o) => sum + o.grand_total, 0)
 
-  // Pesanan PENDING paling baru untuk live notification banner
+  // Estimasi total kas fisik di laci saat ini
+  const estimatedDrawerCash = (currentShift?.starting_cash ?? 0) + totalCashSales
+
+  // Pesanan PENDING paling baru untuk notification banner
   const latestPending = orders.find((o) => o.status === 'PENDING')
 
   const act = async (fn: () => Promise<unknown>) => {
     setError(null)
     try {
       await fn()
-      await refreshOrders()
+      await refreshData()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -121,7 +141,7 @@ export default function CashierDashboard() {
       })
       setSelectedOrderId(null)
       setPayAmount('')
-      await refreshOrders()
+      await refreshData()
     } catch (e) {
       setError((e as Error).message)
     }
@@ -133,7 +153,44 @@ export default function CashierDashboard() {
       await api.withAuth(auth.token).moveTable(selected.id, targetTableNumber)
       setMoveModalOpen(false)
       setTargetTableNumber(null)
-      await refreshOrders()
+      await refreshData()
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const handleOpenShift = async () => {
+    if (!auth) return
+    const cash = Number(startingCashInput)
+    if (isNaN(cash) || cash < 0) {
+      setError('Uang modal awal laci tidak valid.')
+      return
+    }
+    try {
+      const s = await api.withAuth(auth.token).openShift(cash)
+      setCurrentShift(s)
+      setShiftModalOpen(false)
+      setError(null)
+    } catch (e) {
+      setError((e as Error).message)
+    }
+  }
+
+  const handleCloseShift = async () => {
+    if (!auth) return
+    const cash = Number(closeActualCashInput)
+    if (isNaN(cash) || cash < 0) {
+      setError('Masukkan jumlah uang fisik riil saat ini.')
+      return
+    }
+    try {
+      await api.withAuth(auth.token).closeShift(cash, shiftNotesInput || undefined)
+      setCurrentShift(null)
+      setShiftModalOpen(false)
+      setCloseActualCashInput('')
+      setShiftNotesInput('')
+      setError(null)
+      window.alert('Shift kasir berhasil ditutup dan direkonsiliasi.')
     } catch (e) {
       setError((e as Error).message)
     }
@@ -154,6 +211,32 @@ export default function CashierDashboard() {
   const pendingOrdersCount = orders.filter((o) => o.status === 'PENDING').length
   const cookingOrdersCount = orders.filter((o) => o.status === 'COOKING').length
 
+  // Flatten tickets per round untuk antrean masak dapur
+  const kitchenTickets = orders.flatMap((ord) => {
+    // Kelompokkan item berdasarkan round_number
+    const roundsMap = new Map<number, typeof ord.items>()
+    for (const item of ord.items) {
+      const r = item.round_number || 1
+      if (!roundsMap.has(r)) roundsMap.set(r, [])
+      roundsMap.get(r)!.push(item)
+    }
+
+    const rounds = Array.from(roundsMap.entries()).sort(([a], [b]) => a - b)
+    return rounds.map(([roundNum, items]) => {
+      // Hitung subtotal ronde ini
+      const roundTotal = items.reduce((sum, i) => sum + i.subtotal, 0)
+      return {
+        ticketKey: `${ord.id}-round-${roundNum}`,
+        order: ord,
+        roundNumber: roundNum,
+        items,
+        roundTotal,
+        isLatestRound: roundNum === rounds[rounds.length - 1][0],
+        totalRounds: rounds.length,
+      }
+    })
+  })
+
   return (
     <div className="min-h-screen bg-stone-100 text-stone-900 flex flex-col font-sans">
       {/* 1. Application Shell Header */}
@@ -169,18 +252,8 @@ export default function CashierDashboard() {
             </div>
           </div>
 
-          {/* Navigation Mode Tabs */}
+          {/* Navigation Mode Tabs (Customer dihapus sesuai permintaan) */}
           <nav aria-label="Portal Peran" className="flex items-center gap-1 bg-stone-950 p-1 rounded-lg border border-stone-800 text-xs">
-            <button
-              onClick={() => {
-                if (tables[0]) {
-                  window.open(`/t/${tables[0].id}`, '_blank')
-                }
-              }}
-              className="px-3 py-1.5 rounded font-medium text-stone-300 hover:text-white transition touch-target"
-            >
-              Customer (HP)
-            </button>
             <button
               className="px-3 py-1.5 rounded font-bold bg-amber-700 text-white shadow-sm transition touch-target"
             >
@@ -201,7 +274,7 @@ export default function CashierDashboard() {
               <span className="text-stone-300">SSE Aktif</span>
             </div>
             <div className="text-stone-400 border-l border-stone-700 pl-3">
-              Shift: <span className="text-stone-200 font-medium">{auth.user.username}</span>
+              Kasir: <span className="text-stone-200 font-medium">{auth.user.username}</span>
             </div>
             <button
               onClick={() => {
@@ -209,6 +282,7 @@ export default function CashierDashboard() {
                 navigate('/admin')
               }}
               className="px-2.5 py-1 bg-stone-800 hover:bg-stone-700 rounded text-stone-300 text-xs transition"
+              title="Logout akun staf (tidak mengakhiri shift kasir)"
             >
               Keluar
             </button>
@@ -232,7 +306,7 @@ export default function CashierDashboard() {
             <h2 className="text-base font-bold text-stone-900">Kendali Meja &amp; Antrean Pesanan</h2>
             <p className="text-xs text-stone-600 mt-0.5">Denah meja restoran terhubung langsung ke notifikasi live stream dapur.</p>
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
             <div className="inline-flex rounded-md border border-stone-300 bg-stone-50 p-0.5 text-xs" role="group" aria-label="Format Tampilan Kasir">
               <button
                 onClick={() => setDisplayMode('split')}
@@ -259,16 +333,26 @@ export default function CashierDashboard() {
                   </span>
                 )}
               </button>
-             </div>
+            </div>
+
+            {/* Tombol Uang Laci / Shift */}
             <button
-              onClick={() => void refreshOrders()}
-              className="px-3 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 text-xs font-semibold rounded border border-stone-300 touch-target flex items-center gap-1.5"
-              title="Perbarui data"
+              onClick={() => setShiftModalOpen(true)}
+              className={`px-3 py-1.5 text-xs font-semibold rounded border touch-target flex items-center gap-1.5 transition ${
+                currentShift
+                  ? 'bg-stone-100 hover:bg-stone-200 text-stone-800 border-stone-300'
+                  : 'bg-amber-100 hover:bg-amber-200 text-amber-900 border-amber-300 font-bold'
+              }`}
+              title="Klik untuk melihat / mengatur uang laci kasir"
             >
-              <span>Uang Laci: Rp {totalCashEstimate.toLocaleString('id-ID')}</span>
+              <span>
+                {currentShift
+                  ? `Uang Laci: Rp ${estimatedDrawerCash.toLocaleString('id-ID')}`
+                  : 'Uang Laci: Belum Buka Shift (Set Modal)'}
+              </span>
             </button>
-           </div>
-         </div>
+          </div>
+        </div>
 
         {/* 3. Live Stream Notification Banner (Pesanan Baru) */}
         {latestPending && (
@@ -455,7 +539,7 @@ export default function CashierDashboard() {
               </div>
             </div>
 
-            {/* Right 5 cols: Active Bill Panel */}
+            {/* Right 5 cols: Active Bill Panel (Tombol masak biru dihapus) */}
             <div className="lg:col-span-5 bg-white border border-stone-200 rounded-lg p-4 shadow-sm flex flex-col justify-between space-y-4">
               {!selected ? (
                 <div className="py-16 text-center text-stone-400 space-y-2">
@@ -539,28 +623,6 @@ export default function CashierDashboard() {
                     </div>
                   </div>
 
-                  {/* Status Dapur Quick Step */}
-                  <div className="flex gap-2 pt-1 text-xs">
-                    {selected.status === 'PENDING' && (
-                      <button
-                        type="button"
-                        onClick={() => void act(() => api.withAuth(auth.token).updateOrderStatus(selected.id, 'COOKING'))}
-                        className="flex-1 py-2 bg-sky-100 hover:bg-sky-200 border border-sky-300 text-sky-900 rounded font-bold touch-target"
-                      >
-                        Mulai Masak
-                      </button>
-                    )}
-                    {selected.status === 'COOKING' && (
-                      <button
-                        type="button"
-                        onClick={() => void act(() => api.withAuth(auth.token).updateOrderStatus(selected.id, 'SERVED'))}
-                        className="flex-1 py-2 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 text-emerald-900 rounded font-bold touch-target"
-                      >
-                        Siap Saji
-                      </button>
-                    )}
-                  </div>
-
                   {/* Payment section */}
                   <div className="space-y-2 pt-2 border-t border-stone-200">
                     <div className="grid grid-cols-2 gap-2 text-xs">
@@ -639,20 +701,20 @@ export default function CashierDashboard() {
           </div>
         )}
 
-        {/* 5. MODE 2: Antrean Masak (Stream Layout) */}
+        {/* 5. MODE 2: Antrean Masak (Stream Layout - Pemisahan Babak Multi-Round) */}
         {displayMode === 'stream' && (
           <div className="bg-white border border-stone-200 rounded-lg p-4 shadow-sm space-y-3">
             <div className="flex flex-col sm:flex-row justify-between sm:items-center pb-2 border-b border-stone-200 gap-2">
               <div>
                 <h3 className="text-sm font-bold text-stone-900">Antrean Pesanan Masuk (Urutan Waktu Detik)</h3>
-                <p className="text-xs text-stone-500">Gunakan layar ini di area barista/dapur untuk memproses tiket pesanan.</p>
+                <p className="text-xs text-stone-500">Tiket per babak pemesanan untuk area dapur &amp; barista memproses pesanan.</p>
               </div>
               <span className="text-xs font-bold text-amber-900 bg-amber-50 border border-amber-200 px-2.5 py-1 rounded">
-                {orders.length} Pesanan Aktif
+                {kitchenTickets.length} Tiket Dapur Aktif
               </span>
             </div>
 
-            {orders.length === 0 ? (
+            {kitchenTickets.length === 0 ? (
               <div className="py-16 text-center text-stone-400 space-y-1">
                 <p className="text-sm font-bold text-stone-600">Dapur Bersih! Tidak Ada Antrean Aktif</p>
                 <p className="text-xs">Pesanan baru yang dikirim oleh pelanggan meja akan otomatis muncul di sini via SSE.</p>
@@ -665,20 +727,21 @@ export default function CashierDashboard() {
                       <th scope="col" className="py-2.5 px-3">Jam</th>
                       <th scope="col" className="py-2.5 px-3">Meja</th>
                       <th scope="col" className="py-2.5 px-3">Pelanggan</th>
-                      <th scope="col" className="py-2.5 px-3">Rincian Menu</th>
-                      <th scope="col" className="py-2.5 px-3">Total</th>
-                      <th scope="col" className="py-2.5 px-3">Status</th>
+                      <th scope="col" className="py-2.5 px-3">Babak</th>
+                      <th scope="col" className="py-2.5 px-3">Rincian Menu Babak Ini</th>
+                      <th scope="col" className="py-2.5 px-3">Status Meja</th>
                       <th scope="col" className="py-2.5 px-3 text-right">Aksi Dapur</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-stone-200 text-stone-900">
-                    {orders.map((ord) => {
+                    {kitchenTickets.map((ticket) => {
+                      const ord = ticket.order
                       const timeStr = ord.created_at ? new Date(ord.created_at).toLocaleTimeString('id-ID') : '-'
                       const isPending = ord.status === 'PENDING'
                       const isCooking = ord.status === 'COOKING'
 
                       return (
-                        <tr key={ord.id} className="hover:bg-stone-50 transition">
+                        <tr key={ticket.ticketKey} className="hover:bg-stone-50 transition">
                           <td className="py-3 px-3 font-mono-num text-stone-600 whitespace-nowrap">
                             {timeStr}
                           </td>
@@ -688,8 +751,18 @@ export default function CashierDashboard() {
                           <td className="py-3 px-3 font-medium text-stone-800 whitespace-nowrap">
                             {ord.customer_name}
                           </td>
-                          <td className="py-3 px-3 min-w-[240px]">
-                            {ord.items.map((item) => (
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className={`px-2 py-0.5 rounded font-bold text-[11px] ${
+                              ticket.roundNumber > 1
+                                ? 'bg-purple-100 text-purple-900 border border-purple-300'
+                                : 'bg-stone-100 text-stone-800'
+                            }`}>
+                              Babak {ticket.roundNumber}
+                              {ticket.totalRounds > 1 && ticket.isLatestRound ? ' (Tambahan)' : ''}
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 min-w-[260px]">
+                            {ticket.items.map((item) => (
                               <div key={item.id} className="mb-1">
                                 <span className="font-bold text-stone-900">{item.quantity}x</span>{' '}
                                 <span className="text-stone-800">{item.product_name_snapshot}</span>
@@ -700,9 +773,6 @@ export default function CashierDashboard() {
                                 )}
                               </div>
                             ))}
-                          </td>
-                          <td className="py-3 px-3 font-mono-num font-semibold whitespace-nowrap">
-                            Rp {ord.grand_total.toLocaleString('id-ID')}
                           </td>
                           <td className="py-3 px-3 whitespace-nowrap">
                             <span
@@ -745,7 +815,7 @@ export default function CashierDashboard() {
                                 }}
                                 className="px-2.5 py-1.5 bg-stone-100 hover:bg-stone-200 text-stone-800 border border-stone-300 rounded text-xs font-semibold touch-target"
                               >
-                                Bon
+                                Bon Meja
                               </button>
                             </div>
                           </td>
@@ -760,7 +830,159 @@ export default function CashierDashboard() {
         )}
       </main>
 
-      {/* 6. Modal Dialog Pindah Meja */}
+      {/* 6. Modal Shift & Uang Laci Awal */}
+      {shiftModalOpen && (
+        <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50 no-print" role="dialog" aria-modal="true">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-5 space-y-4">
+            <div className="flex justify-between items-center pb-2 border-b border-stone-200">
+              <h3 className="text-sm font-bold text-stone-900">
+                {currentShift ? 'Informasi Shift & Kas Laci' : 'Buka Shift Kasir Baru'}
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShiftModalOpen(false)}
+                className="text-stone-400 hover:text-stone-600 font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {!currentShift ? (
+              // Form Buka Shift
+              <div className="space-y-3 text-xs">
+                <p className="text-stone-600">
+                  Masukkan uang modal fisik awal yang ada di laci kasir sebelum memulai transaksi hari ini:
+                </p>
+                <div>
+                  <label className="font-bold text-stone-700 uppercase block mb-1">
+                    Uang Modal Awal (Rp):
+                  </label>
+                  <input
+                    type="number"
+                    value={startingCashInput}
+                    onChange={(e) => setStartingCashInput(e.target.value)}
+                    placeholder="200000"
+                    className="w-full border border-stone-300 rounded px-3 py-2 text-sm font-mono-num touch-target"
+                  />
+                  <div className="flex gap-1.5 mt-2">
+                    {[100000, 200000, 300000, 500000].map((amt) => (
+                      <button
+                        key={amt}
+                        type="button"
+                        onClick={() => setStartingCashInput(String(amt))}
+                        className="px-2 py-1 bg-stone-100 hover:bg-stone-200 rounded border border-stone-300 font-mono-num"
+                      >
+                        {amt / 1000}k
+                      </button>
+                    ))}
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-3 border-t border-stone-200">
+                  <button
+                    type="button"
+                    onClick={() => setShiftModalOpen(false)}
+                    className="flex-1 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded font-semibold border border-stone-300"
+                  >
+                    Batal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleOpenShift()}
+                    className="flex-1 py-2 bg-amber-700 hover:bg-amber-800 text-white rounded font-bold shadow"
+                  >
+                    Buka Shift
+                  </button>
+                </div>
+              </div>
+            ) : (
+              // Info Shift Aktif & Form Tutup Shift
+              <div className="space-y-3 text-xs">
+                <div className="bg-stone-50 border border-stone-200 rounded p-3 space-y-1.5">
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Waktu Buka Shift:</span>
+                    <span className="font-mono-num font-semibold text-stone-800">
+                      {new Date(currentShift.opened_at).toLocaleTimeString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Modal Kas Awal:</span>
+                    <span className="font-mono-num font-semibold text-stone-800">
+                      Rp {currentShift.starting_cash.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-stone-500">Total Penjualan Tunai:</span>
+                    <span className="font-mono-num font-semibold text-stone-800">
+                      Rp {totalCashSales.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                  <div className="flex justify-between font-bold pt-1.5 border-t border-dashed border-stone-300 text-stone-900">
+                    <span>Estimasi Uang Fisik di Laci:</span>
+                    <span className="font-mono-num text-amber-800">
+                      Rp {estimatedDrawerCash.toLocaleString('id-ID')}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-stone-200 space-y-2">
+                  <p className="font-bold text-stone-800">Tutup Shift &amp; Rekonsiliasi Kas</p>
+                  <p className="text-[11px] text-stone-500">
+                    Hitung uang fisik di laci saat ini dan masukkan jumlah sebenarnya:
+                  </p>
+                  <input
+                    type="number"
+                    value={closeActualCashInput}
+                    onChange={(e) => setCloseActualCashInput(e.target.value)}
+                    placeholder={`Contoh: ${estimatedDrawerCash}`}
+                    className="w-full border border-stone-300 rounded px-3 py-2 text-sm font-mono-num touch-target"
+                  />
+                  {closeActualCashInput && (
+                    <div className="text-[11px]">
+                      {Number(closeActualCashInput) === estimatedDrawerCash ? (
+                        <p className="text-emerald-700 font-bold">Kas Pas (Selisih Rp 0)</p>
+                      ) : Number(closeActualCashInput) > estimatedDrawerCash ? (
+                        <p className="text-sky-700 font-bold">
+                          Kas Lebih: +Rp {(Number(closeActualCashInput) - estimatedDrawerCash).toLocaleString('id-ID')}
+                        </p>
+                      ) : (
+                        <p className="text-rose-700 font-bold">
+                          Kas Kurang: -Rp {(estimatedDrawerCash - Number(closeActualCashInput)).toLocaleString('id-ID')}
+                        </p>
+                      )}
+                    </div>
+                  )}
+                  <input
+                    type="text"
+                    value={shiftNotesInput}
+                    onChange={(e) => setShiftNotesInput(e.target.value)}
+                    placeholder="Catatan shift (opsional)"
+                    className="w-full border border-stone-300 rounded px-3 py-1.5 text-xs touch-target"
+                  />
+                </div>
+
+                <div className="flex gap-2 pt-2 border-t border-stone-200">
+                  <button
+                    type="button"
+                    onClick={() => setShiftModalOpen(false)}
+                    className="flex-1 py-2 bg-stone-100 hover:bg-stone-200 text-stone-800 rounded font-semibold border border-stone-300"
+                  >
+                    Tutup Modal
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void handleCloseShift()}
+                    className="flex-1 py-2 bg-rose-700 hover:bg-rose-800 text-white rounded font-bold shadow"
+                  >
+                    Tutup Shift
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* 7. Modal Dialog Pindah Meja */}
       {moveModalOpen && selected && (
         <div className="fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50 no-print" role="dialog" aria-modal="true">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-sm p-4 space-y-3">
@@ -814,7 +1036,7 @@ export default function CashierDashboard() {
         </div>
       )}
 
-      {/* 7. Modal Preview & Print Struk Pembayaran */}
+      {/* 8. Modal Preview & Print Struk Pembayaran */}
       {lastReceipt && paymentInfo && (
         <div
           className="receipt-backdrop fixed inset-0 bg-stone-900/60 flex items-center justify-center p-4 z-50"
