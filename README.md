@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="docs/banner.svg" alt="Kafe Dine-in Web POS Banner" width="100%" />
+</p>
+
 # Kafe Dine-in Web POS
 
 Aplikasi Point of Sale (POS) dine-in multi-tenant berbasis web yang dirancang untuk operasional kafe mandiri skala 10-25 meja. Seluruh sistem berjalan langsung di browser modern tanpa instalasi aplikasi native, tanpa biaya langganan bulanan (arsitektur hosting Rp 0), dan mendukung pencetakan struk printer thermal 58mm.
