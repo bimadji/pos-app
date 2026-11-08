@@ -332,7 +332,7 @@ export default function CashierDashboard() {
           aria-modal="true"
           aria-label="Preview struk pembayaran"
         >
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-xs max-h-[90vh] overflow-y-auto">
+          <div className="receipt-modal-box bg-white rounded-lg shadow-xl w-full max-w-xs max-h-[90vh] overflow-y-auto">
             <div className="receipt-print-area p-4 text-[11px] font-mono-num text-stone-900">
               <p className="text-center font-bold text-sm">KAFE SENJA KOPI</p>
               <p className="text-center text-[10px] text-stone-500">Jl. Contoh No. 123, Kota</p>
