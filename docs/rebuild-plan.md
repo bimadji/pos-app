@@ -220,10 +220,10 @@ Pengujian dijalankan otomatis menggunakan **Pytest**:
 
 ## 8. Roadmap Implementasi 5 Fase
 
-| Fase | Fokus Pekerjaan | Deliverable Konkret | Konsep Backend yang Dipelajari |
+| Fase | Fokus Pekerjaan | Deliverable Konkret | Status |
 | :--- | :--- | :--- | :--- |
-| **Fase 1** | **Pondasi Backend, Database & Auth Multi-tenant** | Setup FastAPI + Docker Compose PostgreSQL, migrasi Alembic (`tenants`, `users`), hashing Argon2/Bcrypt, endpoint JWT login & RBAC guard. | Async SQLAlchemy, FastAPI Dependency Injection, Pydantic v2 settings, JWT authentication. |
-| **Fase 2** | **Katalog Menu, Stok & Meja (Core Data)** | CRUD Kategori, Produk, Meja. Endpoint pembuatan Signed QR Table Token untuk customer. Switch cepat "Menu Habis". | Kriptografi tanda-tangan HMAC/JWT, validasi file upload / URL media, database seeders. |
-| **Fase 3** | **Mesin Transaksi, Stok Atomik & Testing Kritis** | Endpoint `POST /orders`, transaksi stok `WHERE stock >= qty`, pembatalan order (void + rollback stok), multi-round ordering, idempotency key pembayaran kasir, serta eksekusi Pytest suite (anomali & security). | Isolasi transaksi ACID, row-level locking, race condition mitigation, automated integration testing. |
-| **Fase 4** | **Realtime Live Order & Frontend React Web** | Stream SSE di FastAPI (`/orders/stream`), Frontend React Vite (Web Customer QR, Web Kasir Table Grid + Stream, Web Admin). Optimistic UI, auto-reconnect SSE, dan draft keranjang LocalStorage. | Server-Sent Events, Web Streams, state management frontend, responsive mobile-first UI. |
-| **Fase 5** | **Operasional Kafe, Deployment Rp 0 & Uji Pilot** | Sistem shift kasir ringkas (buka/tutup modal), cetak struk browser kasir (`window.print()`), ringkasan penjualan harian/CSV, deployment backend Docker ke Render/Fly.io + database Neon/Supabase + frontend Vercel. | CI/CD, containerization Docker multi-stage build, CORS policy produksi, zero-downtime database migration. |
+| **Fase 1** | **Pondasi Backend, Database & Auth Multi-tenant** | Setup FastAPI + Docker Compose PostgreSQL, migrasi Alembic (`tenants`, `users`), hashing Argon2/Bcrypt, endpoint JWT login & RBAC guard. | **Selesai (Merged)** |
+| **Fase 2** | **Katalog Menu, Stok & Meja (Core Data)** | CRUD Kategori, Produk, Meja. Endpoint pembuatan Signed QR Table Token untuk customer. Switch cepat "Menu Habis". | **Selesai (Merged)** |
+| **Fase 3** | **Mesin Transaksi, Stok Atomik & Testing Kritis** | Endpoint `POST /orders`, transaksi stok `WHERE stock >= qty`, pembatalan order (void + rollback stok), multi-round ordering, idempotency key pembayaran kasir, serta eksekusi Pytest suite. | **Selesai (Merged)** |
+| **Fase 4** | **Realtime Live Order & Frontend React Web** | Stream SSE di FastAPI (`/orders/stream`), Frontend React Vite (Web Customer QR, Web Kasir Table Grid + Stream, Web Admin). Optimistic UI, auto-reconnect SSE, dan draft keranjang LocalStorage. | **Selesai (Merged)** |
+| **Fase 5** | **Operasional Kafe, Deployment Rp 0 & Uji Pilot** | Sistem shift kasir & audit laci, cetak struk thermal 58mm, antrean dapur per babak, ringkasan penjualan harian/CSV, deployment Docker & cloud Rp 0. | **Selesai (Merged)** |
